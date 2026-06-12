@@ -1,0 +1,173 @@
+@import url('https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@300;400;500;600;700;800;900&display=swap');
+@import "tailwindcss";
+
+@theme {
+  --font-sans: "Plus Jakarta Sans", "Inter", ui-sans-serif, system-ui, sans-serif;
+  --font-display: "Plus Jakarta Sans", "Inter", sans-serif;
+  --font-mono: "Plus Jakarta Sans", "Inter", sans-serif;
+}
+
+:root {
+  --color-primary: #0066FF;       /* Premium bright royal blue */
+  --color-primary-hover: #0052FF; /* Deep active ocean blue */
+  --color-orange: #FF7800;        /* Vivid energetic orange to replace black/gold */
+}
+
+/* Beautiful modern light blue & white platform backdrop */
+html, body, .bg-\[\#020617\], #home_view_wrapper, .min-h-screen {
+  font-family: var(--font-sans);
+  background-color: #F3F6FC !important; /* Premium soft off-white with blue undertone */
+  color: #1E293B !important; /* Deep charcoal for perfect readability */
+  font-size: 111% !important; /* Larger readable size */
+}
+
+body {
+  overflow-x: hidden;
+}
+
+h1, h2, h3, h4, .text-white, .font-display {
+  color: #1E293B !important; /* Force readable text slate instead of white */
+}
+
+/* Let's restore the headers to look blue/white as requested */
+header, header.sticky, .bg-\[\#0066FF\] h1, .bg-\[\#0066FF\], .bg-\[\#0066FF\] * {
+  background-color: #0066FF !important;
+  color: #FFFFFF !important;
+}
+
+header * {
+  color: #FFFFFF !important;
+}
+
+/* Map all dark background items to elegant white plates with royal blue shadows */
+.bg-\[\#0A0E17\],
+.bg-\[\#091032\],
+.bg-\[\#030617\],
+.bg-\[\#03061A\],
+.bg-\[\#0A1137\]\/60,
+.bg-\[\#0A1137\],
+.bg-slate-900,
+.bg-slate-800,
+.bg-slate-950,
+.bg-black\/40 {
+  background-color: #FFFFFF !important;
+  color: #1E293B !important;
+  border: 1px solid rgba(0, 102, 255, 0.08) !important;
+  box-shadow: 0 4px 20px rgba(0, 102, 255, 0.04) !important;
+  border-radius: 20px !important;
+}
+
+/* Fix text colors inside these newly white elements that used to have text-gray-300, text-slate-100 etc */
+.bg-\[\#0A0E17\] *,
+.bg-\[\#091032\] *,
+.bg-\[\#030617\] *,
+.bg-\[\#03061A\] *,
+.bg-\[\#0A1137\]\/60 *,
+.bg-slate-900 *,
+.bg-slate-800 *,
+.bg-slate-950 *,
+.bg-black\/40 * {
+  color: #1E293B !important; /* Convert everything to slate-800 color */
+}
+
+/* Force gray-500/slate-400 equivalent for small text items inside white cards */
+.text-slate-400, .text-gray-400, .text-gray-500, .text-slate-500 {
+  color: #64748B !important;
+}
+
+/* Orange replacements for all gold / amber / black highlights and buttons */
+.text-\[\#D4AF37\],
+.text-yellow-400,
+.text-amber-500,
+.text-amber-400 {
+  color: #FF7800 !important; /* Premium orange text color replacement */
+}
+
+/* Make any gold button ORANGE */
+.bg-\[\#D4AF37\],
+.bg-amber-500,
+.bg-amber-400,
+.bg-yellow-400 {
+  background: linear-gradient(135deg, #FF8C00 0%, #FF5500 100%) !important; /* Vivid high contrast premium Orange! */
+  color: #FFFFFF !important;
+  border: none !important;
+  box-shadow: 0 4px 14px rgba(255, 120, 0, 0.25) !important;
+}
+
+.bg-\[\#D4AF37\] *,
+.bg-amber-500 *,
+.bg-amber-400 * {
+  color: #FFFFFF !important; /* Ensure readable text on orange buttons */
+}
+
+/* If any other CTA is raw black, make it vivid Royal Blue */
+.bg-black {
+  background: #0066FF !important;
+  color: #FFFFFF !important;
+  box-shadow: 0 4px 14px rgba(0, 102, 255, 0.25) !important;
+}
+
+.bg-black * {
+  color: #FFFFFF !important;
+}
+
+/* Keep success colors readable */
+.text-emerald-400, .text-emerald-500, .text-emerald-600 {
+  color: #10B981 !important;
+}
+
+/* Beautiful modern inputs override for light theme */
+input, select, textarea {
+  background-color: #FFFFFF !important;
+  color: #1E293B !important;
+  border: 1.5px solid rgba(0, 102, 255, 0.12) !important;
+  border-radius: 12px !important;
+}
+
+input:focus, select:focus, textarea:focus {
+  border-color: #0066FF !important;
+  box-shadow: 0 0 0 4px rgba(0, 102, 255, 0.12) !important;
+  outline: none;
+}
+
+/* Override bottom stick menu */
+nav.fixed, #sticky_mobile_nav {
+  background-color: #FFFFFF !important;
+  border-top: 1.5px solid rgba(0, 102, 255, 0.08) !important;
+  box-shadow: 0 -4px 20px rgba(0, 102, 255, 0.03) !important;
+}
+
+nav.fixed button, #sticky_mobile_nav button {
+  color: #64748B !important;
+}
+
+/* Active tab orange highlighting */
+nav.fixed button[class*="text-[#D4AF37]"], 
+#sticky_mobile_nav button[class*="text-[#D4AF37]"],
+nav.fixed button[class*="text-amber-500"],
+#sticky_mobile_nav button[class*="text-amber-500"] {
+  color: #FF7800 !important;
+}
+
+/* Clean up scrollbars */
+::-webkit-scrollbar {
+  width: 5px;
+  height: 5px;
+}
+
+::-webkit-scrollbar-track {
+  background: #F3F6FC;
+}
+
+::-webkit-scrollbar-thumb {
+  background: rgba(0, 102, 255, 0.2);
+  border-radius: 4px;
+}
+
+/* Override profile avatar styles */
+.w-9.h-9.rounded-xl.bg-white {
+  background-color: #FFFFFF !important;
+}
+.w-9.h-9.rounded-xl.bg-white svg {
+  color: #0066FF !important;
+}

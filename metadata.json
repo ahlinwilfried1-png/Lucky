@@ -1,0 +1,6 @@
+{
+  "name": "Plateforme d'Investissement Moderne",
+  "description": "Une application d'investissement moderne, sécurisée et responsive, inspirée des grandes plateformes de fintech internationales, avec tableaux de bord utilisateurs et d'administration, dépôts Mobile Money, système de parrainage et gains journaliers.",
+  "requestFramePermissions": [],
+  "majorCapabilities": ["MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"]
+}
