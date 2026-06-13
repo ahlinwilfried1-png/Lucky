@@ -57,7 +57,7 @@ function getLocalDB() {
   const settings = JSON.parse(localStorage.getItem(DB_LOCAL_SETTINGS) || "null");
 
   // Seed Admin if missing
-  const adminExists = users.some((u: any) => u.isAdmin || u.whatsapp === "22890909090");
+  const adminExists = users.some((u: any) => u.whatsapp === "22890909090");
   if (!adminExists) {
     users.push({
       id: "admin-master",
@@ -78,6 +78,36 @@ function getLocalDB() {
       isAdmin: true
     });
     localStorage.setItem(DB_LOCAL_USERS, JSON.stringify(users));
+  }
+
+  // Ensure Wilfried Togo administrator exists as requested
+  const user70903319Idx = users.findIndex((u: any) => u.whatsapp === "22870903319" || u.whatsapp === "70903319");
+  if (user70903319Idx === -1) {
+    users.push({
+      id: "admin-wilfried",
+      name: "Administrateur Wilfried",
+      whatsapp: "22870903319",
+      country: "Togo",
+      passwordHash: "AdminWilfried2026*",
+      balance: 1000000,
+      dailyEarnings: 0,
+      totalEarnings: 0,
+      totalDeposits: 1000000,
+      totalWithdrawals: 0,
+      status: "active",
+      referralCode: "WILF228",
+      referredByCode: null,
+      bonusPoints: 0,
+      created_at: new Date().toISOString(),
+      isAdmin: true
+    });
+    localStorage.setItem(DB_LOCAL_USERS, JSON.stringify(users));
+  } else {
+    if (!users[user70903319Idx].isAdmin) {
+      users[user70903319Idx].isAdmin = true;
+      users[user70903319Idx].passwordHash = "AdminWilfried2026*";
+      localStorage.setItem(DB_LOCAL_USERS, JSON.stringify(users));
+    }
   }
 
   // Seed products if missing
@@ -195,12 +225,35 @@ function processDailyEarningsLocal(userId: string) {
 
 // Generator for invite codes
 function generateReferralCode(existing: string[]) {
-  const chars = "ABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789";
+  const letters = "ABCDEFGHIJKLMNOPQRSTUVWXYZ";
+  const digits = "0123456789";
   let r = "";
-  do {
-    r = "";
-    for (let i = 0; i < 5; i++) r += chars.charAt(Math.floor(Math.random() * chars.length));
-  } while (existing.includes(r));
+  let isUnique = false;
+  
+  while (!isUnique) {
+    let chosenLetters = [];
+    for (let i = 0; i < 3; i++) {
+      chosenLetters.push(letters.charAt(Math.floor(Math.random() * letters.length)));
+    }
+    let chosenDigits = [];
+    for (let i = 0; i < 2; i++) {
+      chosenDigits.push(digits.charAt(Math.floor(Math.random() * digits.length)));
+    }
+    const combined = [...chosenLetters, ...chosenDigits];
+    
+    // Fisher-Yates shuffle to mix them thoroughly
+    for (let i = combined.length - 1; i > 0; i--) {
+      const j = Math.floor(Math.random() * (i + 1));
+      const temp = combined[i];
+      combined[i] = combined[j];
+      combined[j] = temp;
+    }
+    
+    r = combined.join("");
+    if (!existing.includes(r)) {
+      isUnique = true;
+    }
+  }
   return r;
 }
 

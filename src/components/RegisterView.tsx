@@ -19,24 +19,33 @@ export default function RegisterView({ onNavigate, lang }: RegisterViewProps) {
   const [country, setCountry] = useState("Togo");
   const [password, setPassword] = useState("");
   const [confirmPassword, setConfirmPassword] = useState("");
-  const [sponsorCode, setSponsorCode] = useState("");
+  const [sponsorCode, setSponsorCode] = useState("WILF228");
   const [error, setError] = useState("");
   const [success, setSuccess] = useState("");
   const [loading, setLoading] = useState(false);
 
   // Get selected country details
-  const selectedCountry = countryList.find(c => c.name === country) || countryList[1]; // default Benin
+  const selectedCountry = countryList.find(c => c.name === country) || countryList[0]; // default to Togo
 
-  // Auto-detect referral code from URL search query if exists
+  // Auto-detect referral code from URL search query if exists or falls back to stored localStorage token, or WILF228 fallback
   useEffect(() => {
     try {
       const params = new URLSearchParams(window.location.search);
       const ref = params.get("ref") || params.get("sponsor");
       if (ref) {
-        setSponsorCode(ref.toUpperCase().trim());
+        const cleaned = ref.toUpperCase().trim();
+        setSponsorCode(cleaned);
+        localStorage.setItem("pending_referral_code", cleaned);
+      } else {
+        const storedRef = localStorage.getItem("pending_referral_code");
+        if (storedRef) {
+          setSponsorCode(storedRef.toUpperCase().trim());
+        } else {
+          setSponsorCode("WILF228");
+        }
       }
     } catch (e) {
-      // safe fallback
+      setSponsorCode("WILF228");
     }
   }, []);
 
@@ -71,6 +80,9 @@ export default function RegisterView({ onNavigate, lang }: RegisterViewProps) {
         password,
         sponsorCode: sponsorCode || undefined
       });
+
+      // Clear the temporary stored registration referral code on success
+      localStorage.removeItem("pending_referral_code");
 
       setSuccess(lang === "fr" ? "Votre compte d'investisseur a été créé avec succès ! Connectez-vous." : "Success! Account registered. Redirecting to login...");
 

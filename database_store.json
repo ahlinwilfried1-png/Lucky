@@ -1,0 +1,122 @@
+{
+  "users": [
+    {
+      "id": "admin-master",
+      "name": "Administrateur Suprême",
+      "whatsapp": "22890909090",
+      "country": "Togo",
+      "passwordHash": "AdminTogo2026*",
+      "balance": 1000000,
+      "dailyEarnings": 0,
+      "totalEarnings": 0,
+      "totalDeposits": 1000000,
+      "totalWithdrawals": 0,
+      "status": "active",
+      "referralCode": "ADMIN228",
+      "referredByCode": null,
+      "bonusPoints": 0,
+      "created_at": "2026-06-13T07:54:15.547Z",
+      "isAdmin": true
+    },
+    {
+      "id": "admin-wilfried",
+      "name": "Administrateur Wilfried",
+      "whatsapp": "22870903319",
+      "country": "Togo",
+      "passwordHash": "AdminWilfried2026*",
+      "balance": 1000000,
+      "dailyEarnings": 0,
+      "totalEarnings": 0,
+      "totalDeposits": 1000000,
+      "totalWithdrawals": 0,
+      "status": "active",
+      "referralCode": "WILF228",
+      "referredByCode": null,
+      "bonusPoints": 0,
+      "created_at": "2026-06-13T08:34:00.000Z",
+      "isAdmin": true
+    }
+  ],
+  "investments": [],
+  "deposits": [],
+  "withdrawals": [],
+  "referralCommissions": [],
+  "tickets": [],
+  "notifications": [
+    {
+      "id": "notif-welcome",
+      "userId": "all",
+      "title": "Bienvenue sur la plateforme !",
+      "message": "Découvrez nos offres spéciales d'investissement VIP avec des revenus quotidiens garantis. Équipez-vous pour la réussite financière !",
+      "date": "2026-06-13T07:54:15.547Z",
+      "readBy": [
+        "admin-master"
+      ]
+    }
+  ],
+  "bonusCodes": [
+    {
+      "code": "BIENVENUE",
+      "amount": 500,
+      "claimedBy": [],
+      "created_by": "admin-master"
+    },
+    {
+      "code": "CADEAU2026",
+      "amount": 1000,
+      "claimedBy": [],
+      "created_by": "admin-master"
+    }
+  ],
+  "products": [
+    {
+      "id": "vip-1",
+      "name": "VIP Bronze - Standard",
+      "price": 3000,
+      "dailyReturn": 600,
+      "durationDays": 10,
+      "totalReturn": 6000,
+      "badge": "Populaire"
+    },
+    {
+      "id": "vip-2",
+      "name": "VIP Silver - Pro",
+      "price": 10000,
+      "dailyReturn": 2500,
+      "durationDays": 10,
+      "totalReturn": 25000,
+      "badge": "Recommandé"
+    },
+    {
+      "id": "vip-3",
+      "name": "VIP Gold - Élite",
+      "price": 25000,
+      "dailyReturn": 6500,
+      "durationDays": 10,
+      "totalReturn": 65000,
+      "badge": "Rendement Élevé"
+    },
+    {
+      "id": "vip-4",
+      "name": "VIP Diamond - Leader",
+      "price": 50000,
+      "dailyReturn": 14000,
+      "durationDays": 10,
+      "totalReturn": 140000,
+      "badge": "Offre VIP"
+    },
+    {
+      "id": "vip-5",
+      "name": "VIP Ultimate - Prestige",
+      "price": 100000,
+      "dailyReturn": 30000,
+      "durationDays": 10,
+      "totalReturn": 300000,
+      "badge": "Prestige"
+    }
+  ],
+  "settings": {
+    "whatsappGroupLink": "https://chat.whatsapp.com/ExempleGroupeInvesta",
+    "telegramChannelLink": "https://t.me/InvestaPremiumCanal"
+  }
+}

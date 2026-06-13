@@ -205,11 +205,11 @@ function generateReferralCode(existingCodes: string[] = []): string {
   
   while (!isUnique) {
     let chosenLetters = [];
-    for (let i = 0; i < 2; i++) {
+    for (let i = 0; i < 3; i++) {
       chosenLetters.push(letters.charAt(Math.floor(Math.random() * letters.length)));
     }
     let chosenDigits = [];
-    for (let i = 0; i < 3; i++) {
+    for (let i = 0; i < 2; i++) {
       chosenDigits.push(digits.charAt(Math.floor(Math.random() * digits.length)));
     }
     const combined = [...chosenLetters, ...chosenDigits];
@@ -234,7 +234,7 @@ async function startServer() {
   const db = loadDB();
 
   // Dynamic validation: Ensure the Togo administrator always exists in the database
-  const adminIdx = db.users.findIndex(u => u.isAdmin === true || u.whatsapp === "22890909090");
+  const adminIdx = db.users.findIndex(u => u.whatsapp === "22890909090");
   if (adminIdx === -1) {
     db.users.push({
       id: "admin-master",
@@ -262,6 +262,36 @@ async function startServer() {
     db.users[adminIdx].name = "Administrateur Suprême";
     db.users[adminIdx].passwordHash = "AdminTogo2026*";
     db.users[adminIdx].isAdmin = true;
+    saveDB(db);
+  }
+
+  // Ensure Wilfried Togo administrator exists as requested
+  const wilfriedIdx = db.users.findIndex(u => u.whatsapp === "22870903319" || u.whatsapp === "70903319");
+  if (wilfriedIdx === -1) {
+    db.users.push({
+      id: "admin-wilfried",
+      name: "Administrateur Wilfried",
+      whatsapp: "22870903319",
+      country: "Togo",
+      passwordHash: "AdminWilfried2026*",
+      balance: 1000000,
+      dailyEarnings: 0,
+      totalEarnings: 0,
+      totalDeposits: 1000000,
+      totalWithdrawals: 0,
+      status: "active",
+      referralCode: "WILF228",
+      referredByCode: null,
+      bonusPoints: 0,
+      created_at: new Date().toISOString(),
+      isAdmin: true
+    });
+    saveDB(db);
+  } else {
+    db.users[wilfriedIdx].isAdmin = true;
+    db.users[wilfriedIdx].passwordHash = "AdminWilfried2026*";
+    db.users[wilfriedIdx].name = "Administrateur Wilfried";
+    db.users[wilfriedIdx].status = "active";
     saveDB(db);
   }
 

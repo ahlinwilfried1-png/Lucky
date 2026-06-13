@@ -28,6 +28,17 @@ export default function App() {
   // Auto-restore credential sessions from local persistence on boot
   useEffect(() => {
     try {
+      // Auto-detect referral code from URL search query if exists and store it
+      const params = new URLSearchParams(window.location.search);
+      const ref = params.get("ref") || params.get("sponsor");
+      if (ref) {
+        localStorage.setItem("pending_referral_code", ref.toUpperCase().trim());
+      }
+    } catch (e) {
+      console.warn("Could not capture URL referral parameter.", e);
+    }
+
+    try {
       const storedUser = localStorage.getItem("investa_user_session");
       if (storedUser) {
         const parsed = JSON.parse(storedUser);
