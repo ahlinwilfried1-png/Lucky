@@ -791,7 +791,7 @@ export default function DashboardView({ userId, onLogout, lang, onNavigate }: Da
                 <div className="bg-[#020617] border border-white/5 rounded-2xl p-4 flex justify-between items-center text-xs">
                   <div>
                     <span className="text-slate-400 block uppercase text-[10px]">Votre solde retirable</span>
-                    <span className="text-lg font-bold text-[#D4AF37]">{profile?.balance.toLocaleString()} FCFA</span>
+                    <span className="text-lg font-bold text-[#D4AF37]">{(profile?.balance ?? 0).toLocaleString()} FCFA</span>
                   </div>
                   <span className="px-2 py-0.5 rounded text-[10px] bg-[#D4AF37]/10 text-[#D4AF37] font-mono">RETRAIT DE 1K À 500K</span>
                 </div>
@@ -1113,7 +1113,7 @@ export default function DashboardView({ userId, onLogout, lang, onNavigate }: Da
                     <div>
                       <span className="text-[11px] font-bold text-slate-500 uppercase tracking-wider block">Solde disponible</span>
                       <span className="text-3xl font-extrabold font-mono tracking-tight text-[#1E293B] mt-1 block">
-                        {profile?.balance.toLocaleString()} <span className="text-xs font-bold text-[#FF7800]">FCFA</span>
+                        {(profile?.balance ?? 0).toLocaleString()} <span className="text-xs font-bold text-[#FF7800]">FCFA</span>
                       </span>
                     </div>
 
@@ -1127,13 +1127,13 @@ export default function DashboardView({ userId, onLogout, lang, onNavigate }: Da
                     <div>
                       <span className="text-[11px] font-bold text-slate-500 uppercase block">Revenus quotidiens</span>
                       <span className="text-sm font-bold text-emerald-600 font-mono mt-0.5 block">
-                         +{profile?.dailyEarnings.toLocaleString()} F / jour
+                         +{(profile?.dailyEarnings ?? 0).toLocaleString()} F / jour
                       </span>
                     </div>
                     <div>
                       <span className="text-[11px] font-bold text-slate-500 uppercase block">Cumul des gains</span>
                       <span className="text-sm font-bold text-[#FF7800] font-mono mt-0.5 block">
-                        {profile?.totalEarnings.toLocaleString()} F
+                        {(profile?.totalEarnings ?? 0).toLocaleString()} F
                       </span>
                     </div>
                   </div>
@@ -1331,7 +1331,7 @@ export default function DashboardView({ userId, onLogout, lang, onNavigate }: Da
                   <div className="flex flex-col text-right space-y-0.5">
                     <span className="text-[11px] text-slate-500 font-bold uppercase tracking-wider block">Revenus</span>
                     <span className="text-2xl font-black text-[#02A3FC] block">
-                      {profile?.totalEarnings.toLocaleString()} <span className="text-xs font-bold text-slate-400">FCFA</span>
+                      {(profile?.totalEarnings ?? 0).toLocaleString()} <span className="text-xs font-bold text-slate-400">FCFA</span>
                     </span>
                   </div>
                 </div>
@@ -1551,7 +1551,7 @@ export default function DashboardView({ userId, onLogout, lang, onNavigate }: Da
                 {/* Visual identity premium badge */}
                 <div className="bg-gradient-to-r from-amber-500/10 to-yellow-600/10 border border-amber-500/20 rounded-2xl p-5 flex items-center gap-4">
                   <div className="w-14 h-14 rounded-full bg-gradient-to-tr from-amber-500 to-yellow-400 flex items-center justify-center text-black font-bold text-xl uppercase shadow-md shadow-amber-500/15">
-                    {profile?.name.substr(0,2)}
+                    {profile?.name ? profile.name.substring(0, 2) : "I"}
                   </div>
                   <div className="space-y-1">
                     <h3 className="text-sm font-bold text-white uppercase">{profile?.name}</h3>
