@@ -368,7 +368,7 @@ export async function registerUser(payload: any) {
       whatsapp: whatsapp.trim(),
       country,
       passwordHash: password,
-      balance: 0,
+      balance: 200,
       dailyEarnings: 0,
       totalEarnings: 0,
       totalDeposits: 0,
@@ -386,8 +386,8 @@ export async function registerUser(payload: any) {
     db.notifications.push({
       id: "notif-welcome-" + userId,
       userId: userId,
-      title: "Inscription réussie",
-      message: `Heureux de vous compter parmi nous, ${newUser.name} ! Profitez d'un bonus de bienvenue en insérant le code BIENVENUE dans la section correspondante !`,
+      title: "Inscription réussie + Bonus 🎁",
+      message: `Heureux de vous compter parmi nous, ${newUser.name} ! Un bonus d'inscription de 200 FCFA a été crédité sur votre solde ! Profitez également de notre code BIENVENUE pour obtenir plus de bonus !`,
       date: new Date().toISOString(),
       readBy: []
     });
@@ -643,6 +643,10 @@ export async function purchaseProduct(userId: string, productId: string) {
       throw new Error("Produit ou Plan d'investissement non trouvé.");
     }
 
+    if (product.isBlocked) {
+      throw new Error("Ce produit/plan d'investissement est temporairement bloqué ou indisponible pour de nouveaux achats.");
+    }
+
     const maxAllowed = product.maxPurchaseCount !== undefined ? product.maxPurchaseCount : 3;
     const currentPurchased = db.investments.filter((i: any) => i.userId === userId && i.planId === productId).length;
     if (currentPurchased >= maxAllowed) {
@@ -671,6 +675,7 @@ export async function purchaseProduct(userId: string, productId: string) {
       dailyReturn: product.dailyReturn,
       totalWeeks: 1,
       daysActive: 0,
+      durationDays: product.durationDays,
       totalReturn: product.totalReturn,
       purchaseDate: new Date().toISOString(),
       lastClaimDate: new Date().toISOString()
@@ -812,11 +817,17 @@ export async function fetchUserNotifications(userId: string) {
   return apiCall(`/api/user/notifications/${userId}`, undefined, () => {
     const db = getLocalDB();
     const list = db.notifications.filter((n: any) => n.userId === "all" || n.userId === userId);
-    const unreadCount = list.filter((n: any) => !n.readBy.includes(userId)).length;
-    const sortedNotifications = list.map((n: any) => ({
-      ...n,
-      read: n.readBy.includes(userId)
-    })).sort((a: any, b: any) => new Date(b.date).getTime() - new Date(a.date).getTime());
+    const unreadCount = list.filter((n: any) => {
+      const readBy = n.readBy || [];
+      return !readBy.includes(userId);
+    }).length;
+    const sortedNotifications = list.map((n: any) => {
+      const readBy = n.readBy || [];
+      return {
+        ...n,
+        read: readBy.includes(userId)
+      };
+    }).sort((a: any, b: any) => new Date(b.date).getTime() - new Date(a.date).getTime());
 
     return {
       unreadCount,
@@ -833,6 +844,7 @@ export async function markNotificationsAsRead(userId: string) {
   }, () => {
     const db = getLocalDB();
     db.notifications = db.notifications.map((n: any) => {
+      if (!n.readBy) n.readBy = [];
       if ((n.userId === "all" || n.userId === userId) && !n.readBy.includes(userId)) {
         n.readBy.push(userId);
       }
@@ -878,20 +890,30 @@ export async function fetchChatHistory(userId: string) {
 export async function fetchAdminStats() {
   return apiCall("/api/admin/stats", undefined, () => {
     const db = getLocalDB();
-    const totalUsers = db.users.length;
-    const totalDeposited = db.deposits.reduce((acc, d) => d.status === "approved" ? acc + d.amount : acc, 0);
-    const pendingDeposits = db.deposits.reduce((acc, d) => d.status === "pending" ? acc + d.amount : acc, 0);
-    const totalWithdrawn = db.withdrawals.reduce((acc, w) => w.status === "approved" ? acc + w.amount : acc, 0);
-    const pendingWithdrawals = db.withdrawals.reduce((acc, w) => w.status === "pending" ? acc + w.amount : acc, 0);
-    const investmentsActive = db.investments.length;
+    const totalUsers = db.users.filter((u: any) => !u.isAdmin).length;
+    const blockedUsers = db.users.filter((u: any) => u.status === "blocked").length;
+
+    const pendingDeposits = db.deposits.filter((d: any) => d.status === "pending").length;
+    const approvedDepositsSum = db.deposits.filter((d: any) => d.status === "approved").reduce((sum: number, d: any) => sum + d.amount, 0);
+
+    const pendingWithdrawals = db.withdrawals.filter((w: any) => w.status === "pending").length;
+    const approvedWithdrawalsSum = db.withdrawals.filter((w: any) => w.status === "approved").reduce((sum: number, w: any) => sum + w.amount, 0);
+
+    const activeInvestmentSum = db.investments.reduce((sum: number, i: any) => sum + i.price, 0);
+
+    const totalDepositsSubmitted = db.deposits.length;
+    const totalWithdrawalsSubmitted = db.withdrawals.length;
 
     return {
       totalUsers,
-      totalDeposited,
+      blockedUsers,
+      totalDepositsSubmitted,
       pendingDeposits,
-      totalWithdrawn,
+      approvedDepositsSum,
+      totalWithdrawalsSubmitted,
       pendingWithdrawals,
-      investmentsActive
+      approvedWithdrawalsSum,
+      activeInvestmentSum
     };
   });
 }
@@ -899,7 +921,15 @@ export async function fetchAdminStats() {
 export async function fetchAdminUsers() {
   return apiCall("/api/admin/users", undefined, () => {
     const db = getLocalDB();
-    return db.users;
+    const userClients = db.users.filter((u: any) => !u.isAdmin).map((u: any) => {
+      const userInvs = db.investments.filter((i: any) => i.userId === u.id);
+      return {
+        ...u,
+        totalInvCount: userInvs.length,
+        totalInvAmount: userInvs.reduce((acc: number, i: any) => acc + i.price, 0)
+      };
+    });
+    return { users: userClients };
   });
 }
 
@@ -910,32 +940,82 @@ export async function executeAdminUserAction(payload: any) {
     body: JSON.stringify(payload)
   }, () => {
     const db = getLocalDB();
-    const { userId, action, amount } = payload;
-    const uIdx = db.users.findIndex((u: any) => u.id === userId);
+    const { targetUserId, action, amount, newCode, newPassword } = payload;
+    const uIdx = db.users.findIndex((u: any) => u.id === targetUserId);
     if (uIdx === -1) throw new Error("Utilisateur introuvable");
 
     if (action === "block") {
       db.users[uIdx].status = "blocked";
     } else if (action === "unblock") {
       db.users[uIdx].status = "active";
+    } else if (action === "simulate_24h") {
+      db.investments = db.investments.map((inv: any) => {
+        if (inv.userId === targetUserId) {
+          const oldClaim = new Date(inv.lastClaimDate);
+          inv.lastClaimDate = new Date(oldClaim.getTime() - 24 * 60 * 60 * 1000 - 100).toISOString();
+        }
+        return inv;
+      });
+      processDailyEarningsLocal(targetUserId);
     } else if (action === "add_balance") {
       const val = parseFloat(amount || "0");
-      db.users[uIdx].balance += val;
-      db.users[uIdx].totalDeposits += val;
+      if (!isNaN(val)) {
+        db.users[uIdx].balance += val;
+        db.users[uIdx].totalEarnings += val;
+        db.notifications.push({
+          id: "notif-adm-bal-" + Date.now(),
+          userId: targetUserId,
+          title: "Ajustement de solde par l'administrateur",
+          message: `Votre solde principal a été augmenté de +${val} FCFA de façon exceptionnelle par l'administration.`,
+          date: new Date().toISOString(),
+          readBy: []
+        });
+      }
     } else if (action === "deduct_balance") {
       const val = parseFloat(amount || "0");
-      db.users[uIdx].balance = Math.max(0, db.users[uIdx].balance - val);
+      if (!isNaN(val)) {
+        db.users[uIdx].balance = Math.max(0, db.users[uIdx].balance - val);
+      }
+    } else if (action === "set_balance") {
+      const val = parseFloat(amount || "0");
+      if (!isNaN(val)) {
+        db.users[uIdx].balance = val;
+      }
+    } else if (action === "update_code") {
+      if (!newCode || !newCode.trim()) {
+        throw new Error("Le code parrain ne peut pas être vide.");
+      }
+      const cleanedCode = newCode.toUpperCase().trim();
+      const duplicate = db.users.find((u: any) => u.id !== targetUserId && u.referralCode === cleanedCode);
+      if (duplicate) {
+        throw new Error("Ce code de parrainage est déjà attribué.");
+      }
+      db.users[uIdx].referralCode = cleanedCode;
+    } else if (action === "update_password") {
+      if (!newPassword || !newPassword.trim()) {
+        throw new Error("Le mot de passe ne peut pas être vide.");
+      }
+      db.users[uIdx].passwordHash = newPassword.trim();
+    } else if (action === "toggle_admin") {
+      db.users[uIdx].isAdmin = !db.users[uIdx].isAdmin;
     }
 
     saveLocalDB(db);
-    return { success: true };
+    return { success: true, message: `Action ${action} effectuée avec succès.` };
   });
 }
 
 export async function fetchAdminDeposits() {
   return apiCall("/api/admin/deposits", undefined, () => {
     const db = getLocalDB();
-    return db.deposits;
+    const sorted = db.deposits.map((d: any) => {
+      const user = db.users.find((u: any) => u.id === d.userId);
+      return {
+        ...d,
+        userName: user ? user.name : "Inconnu"
+      };
+    }).sort((a: any, b: any) => new Date(b.date || "").getTime() - new Date(a.date || "").getTime());
+    return { deposits: sorted };
   });
 }
 
@@ -977,7 +1057,15 @@ export async function executeAdminDepositAction(depositId: string, action: "appr
 export async function fetchAdminWithdrawals() {
   return apiCall("/api/admin/withdrawals", undefined, () => {
     const db = getLocalDB();
-    return db.withdrawals;
+    const sorted = db.withdrawals.map((w: any) => {
+      const user = db.users.find((u: any) => u.id === w.userId);
+      return {
+        ...w,
+        userName: user ? user.name : "Inconnu",
+        whatsapp: user ? user.whatsapp : ""
+      };
+    }).sort((a: any, b: any) => new Date(b.date || "").getTime() - new Date(a.date || "").getTime());
+    return { withdrawals: sorted };
   });
 }
 
@@ -1096,6 +1184,19 @@ export async function updateAdminProduct(productId: string, payload: any) {
   });
 }
 
+export async function toggleBlockAdminProduct(productId: string) {
+  return apiCall(`/api/admin/products/${productId}/toggle-block`, {
+    method: "PUT"
+  }, () => {
+    const db = getLocalDB();
+    const pIdx = db.products.findIndex((p: any) => p.id === productId);
+    if (pIdx === -1) throw new Error("Produit introuvable");
+    db.products[pIdx].isBlocked = !db.products[pIdx].isBlocked;
+    saveLocalDB(db);
+    return { success: true, product: db.products[pIdx] };
+  });
+}
+
 export async function triggerAdminGlobalNotification(payload: any) {
   return apiCall("/api/admin/notify-all", {
     method: "POST",
@@ -1198,4 +1299,64 @@ export async function updatePlatformSettings(payload: any) {
     saveLocalDB(db);
     return { success: true, settings: db.settings };
   });
+}
+
+// Background schedule for local client database automatic payouts (fallback)
+if (typeof window !== "undefined") {
+  setInterval(() => {
+    try {
+      const db = getLocalDB();
+      let changed = false;
+      const now = new Date();
+      
+      db.users.forEach((u: any) => {
+        if (u.isAdmin) return;
+        
+        db.investments = db.investments.map((inv: any) => {
+          if (inv.userId !== u.id) return inv;
+          
+          const lastClaim = new Date(inv.lastClaimDate);
+          const diffMs = now.getTime() - lastClaim.getTime();
+          const diffDays = Math.floor(diffMs / (1000 * 60 * 60 * 24));
+          
+          if (diffDays > 0) {
+            const activeProduct = db.products.find((p: any) => p.id === inv.planId);
+            const durationLimit = activeProduct ? activeProduct.durationDays : (inv.durationDays || 10);
+            const claimableDays = Math.min(diffDays, durationLimit - inv.daysActive);
+            
+            if (claimableDays > 0) {
+              const reward = claimableDays * inv.dailyReturn;
+              const uIdx = db.users.findIndex((usr: any) => usr.id === u.id);
+              if (uIdx !== -1) {
+                db.users[uIdx].balance += reward;
+                db.users[uIdx].dailyEarnings = inv.dailyReturn;
+                db.users[uIdx].totalEarnings += reward;
+              }
+              
+              inv.daysActive += claimableDays;
+              const nextClaimMs = lastClaim.getTime() + (claimableDays * 24 * 60 * 60 * 1000);
+              inv.lastClaimDate = new Date(nextClaimMs).toISOString();
+              changed = true;
+              
+              db.notifications.push({
+                id: "notif-profit-" + Date.now() + Math.random().toString(36).substr(2, 4),
+                userId: u.id,
+                title: "Revenus VIP crédités",
+                message: `Félicitations! Vous avez reçu ${reward} FCFA pour votre plan ${inv.planName} (${claimableDays} jour(s) de gains).`,
+                date: now.toISOString(),
+                readBy: []
+              });
+            }
+          }
+          return inv;
+        });
+      });
+      
+      if (changed) {
+        saveLocalDB(db);
+      }
+    } catch (err) {
+      console.error("Local fallback background task failed:", err);
+    }
+  }, 10000);
 }

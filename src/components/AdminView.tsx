@@ -41,8 +41,10 @@ import {
   sendChatMessage,
   fetchChatHistory,
   fetchPlatformSettings,
-  updatePlatformSettings
+  updatePlatformSettings,
+  toggleBlockAdminProduct
 } from "../api";
+import { supabase } from "../supabase";
 
 interface AdminViewProps {
   adminUserId: string;
@@ -245,7 +247,7 @@ export default function AdminView({ adminUserId, onExit, lang }: AdminViewProps)
     reloadPlatformSettings();
   }, [activeSegment]);
 
-  // Handle active sub conversation loading
+  // Handle active sub conversation loading and real-time support, deposits, and status pulls
   useEffect(() => {
     if (activeChatUserId) {
       const chatInterval = setInterval(() => {
@@ -255,6 +257,75 @@ export default function AdminView({ adminUserId, onExit, lang }: AdminViewProps)
       }, 3000);
       return () => clearInterval(chatInterval);
     }
+  }, [activeChatUserId]);
+
+  // Supabase Real-time administrative channels for live tracking
+  useEffect(() => {
+    if (!supabase) return;
+
+    // 1. Tickets subscription for live customer assistance messages
+    const ticketsChannel = supabase
+      .channel("admin-tickets")
+      .on(
+        "postgres_changes",
+        {
+          event: "INSERT",
+          schema: "public",
+          table: "tickets"
+        },
+        (payload) => {
+          console.log("Supabase Realtime: New chat message in system!", payload.new);
+          reloadChats();
+          if (activeChatUserId && payload.new.user_id === activeChatUserId) {
+            fetchChatHistory(activeChatUserId).then(data => {
+              setActiveChatHistory(data.history || []);
+            });
+          }
+        }
+      )
+      .subscribe();
+
+    // 2. Live Deposits tracker
+    const depositsChannel = supabase
+      .channel("admin-deposits")
+      .on(
+        "postgres_changes",
+        {
+          event: "*",
+          schema: "public",
+          table: "deposits"
+        },
+        () => {
+          console.log("Supabase Realtime: Deposits data change detected!");
+          reloadDeposits();
+          reloadAdminStats();
+        }
+      )
+      .subscribe();
+
+    // 3. Live Withdrawals tracker
+    const withdrawalsChannel = supabase
+      .channel("admin-withdrawals")
+      .on(
+        "postgres_changes",
+        {
+          event: "*",
+          schema: "public",
+          table: "withdrawals"
+        },
+        () => {
+          console.log("Supabase Realtime: Withdrawals data change detected!");
+          reloadWithdrawals();
+          reloadAdminStats();
+        }
+      )
+      .subscribe();
+
+    return () => {
+      supabase.removeChannel(ticketsChannel);
+      supabase.removeChannel(depositsChannel);
+      supabase.removeChannel(withdrawalsChannel);
+    };
   }, [activeChatUserId]);
 
   const selectConversation = (userId: string, userName: string) => {
@@ -487,6 +558,25 @@ export default function AdminView({ adminUserId, onExit, lang }: AdminViewProps)
           reloadProducts();
         } catch (err: any) {
           setNotifyErr(err.message);
+        }
+      }
+    );
+  };
+
+  // Toggle product block status
+  const handleToggleBlockProduct = async (prodId: string, isBlocked: boolean) => {
+    requestConfirmation(
+      isBlocked ? "Débloquer le Plan VIP" : "Bloquer le Plan VIP",
+      isBlocked 
+        ? "Voulez-vous réactiver ce plan VIP pour permettre de nouveaux achats ? Les utilisateurs pourront à nouveau y souscrire." 
+        : "Voulez-vous désactiver temporairement ce plan VIP ? Il ne sera plus visible pour les nouveaux investissements et affichera 'Indisponible'.",
+      async () => {
+        try {
+          await toggleBlockAdminProduct(prodId);
+          setNotifyMsg(isBlocked ? "Plan réactivé avec succès !" : "Plan d'investissement temporairement bloqué !");
+          reloadProducts();
+        } catch (err: any) {
+          setNotifyErr(err.message || "Erreur lors de la mise à jour de l'état.");
         }
       }
     );
@@ -1369,9 +1459,18 @@ export default function AdminView({ adminUserId, onExit, lang }: AdminViewProps)
                       <div>
                         <div className="flex justify-between items-start mb-2">
                           <h4 className="font-bold text-white uppercase font-sans tracking-wide">{prod.name}</h4>
-                          <span className="px-2 py-0.5 rounded text-[10px] font-mono bg-red-500/10 text-red-400">
-                            {prod.badge || "VIP STANDARD"}
-                          </span>
+                          <div className="flex flex-col items-end gap-1.5">
+                            <span className="px-2 py-0.5 rounded text-[10px] font-mono bg-red-500/10 text-red-400">
+                              {prod.badge || "VIP STANDARD"}
+                            </span>
+                            <span className={`px-2 py-0.5 rounded text-[9px] font-mono font-bold uppercase tracking-wider ${
+                              prod.isBlocked 
+                                ? "bg-red-500/20 border border-red-500/30 text-red-300 animate-pulse" 
+                                : "bg-emerald-500/10 border border-emerald-500/20 text-emerald-400"
+                            }`}>
+                              {prod.isBlocked ? "🚫 Bloqué" : "✅ Actif"}
+                            </span>
+                          </div>
                         </div>
 
                         <div className="h-0.5 w-8 bg-red-500 mb-4"></div>
@@ -1404,6 +1503,17 @@ export default function AdminView({ adminUserId, onExit, lang }: AdminViewProps)
 
                         <div className="flex items-center gap-2">
                           <button
+                            onClick={() => handleToggleBlockProduct(prod.id, !!prod.isBlocked)}
+                            className={`px-2.5 py-1.5 rounded-lg border font-mono font-bold tracking-wider text-[10px] transition uppercase cursor-pointer ${
+                              prod.isBlocked 
+                                ? "bg-emerald-600/15 border-emerald-600/30 text-emerald-400 hover:bg-emerald-600 hover:text-black hover:border-emerald-600" 
+                                : "bg-amber-600/15 border-amber-600/30 text-amber-400 hover:bg-amber-600 hover:text-black hover:border-amber-600"
+                            }`}
+                            title={prod.isBlocked ? "Débloquer et réactiver ce produit" : "Bloquer et désactiver ce produit"}
+                          >
+                            {prod.isBlocked ? "Débloquer ✅" : "Bloquer 🚫"}
+                          </button>
+                          <button
                             onClick={() => {
                               setEditingProductId(prod.id);
                               setEditProdName(prod.name);
@@ -1413,14 +1523,14 @@ export default function AdminView({ adminUserId, onExit, lang }: AdminViewProps)
                               setEditProdBadge(prod.badge || "");
                               setEditProdMaxPurchases(prod.maxPurchaseCount !== undefined ? prod.maxPurchaseCount.toString() : "3");
                             }}
-                            className="p-2 rounded-lg bg-yellow-500/10 hover:bg-yellow-500 text-yellow-400 hover:text-black border border-yellow-500/15 transition"
+                            className="p-2 rounded-lg bg-yellow-500/10 hover:bg-yellow-500 text-yellow-400 hover:text-black border border-yellow-500/15 transition cursor-pointer"
                             title="Modifier ce produit"
                           >
                             <Pencil className="w-4 h-4" />
                           </button>
                           <button
                             onClick={() => handleDeleteProduct(prod.id)}
-                            className="p-2 rounded-lg bg-red-500/10 hover:bg-red-600 text-red-400 hover:text-black border border-red-500/15 transition"
+                            className="p-2 rounded-lg bg-red-500/10 hover:bg-red-600 text-red-400 hover:text-black border border-red-500/15 transition cursor-pointer"
                             title="Supprimer ce produit"
                           >
                             <Trash2 className="w-4 h-4" />

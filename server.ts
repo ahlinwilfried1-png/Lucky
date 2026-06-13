@@ -2,6 +2,8 @@ import express from "express";
 import path from "path";
 import fs from "fs";
 import { createServer as createViteServer } from "vite";
+import { loadStateFromSupabase, saveStateToSupabase, deleteProductFromSupabase } from "./src/supabase.js";
+
 
 const PORT = 3000;
 const DB_FILE = path.join(process.cwd(), "database_store.json");
@@ -99,6 +101,7 @@ interface DBState {
     totalReturn: number;
     badge?: string;
     maxPurchaseCount?: number;
+    isBlocked?: boolean;
   }>;
   settings?: {
     whatsappGroupLink: string;
@@ -191,6 +194,10 @@ function loadDB(): DBState {
 function saveDB(state: DBState) {
   try {
     fs.writeFileSync(DB_FILE, JSON.stringify(state, null, 2), "utf-8");
+    // Replicate state update to Supabase in the background
+    saveStateToSupabase(state).catch(err => {
+      console.warn("Soft warning: failed to sync state to Supabase:", err.message);
+    });
   } catch (err) {
     console.error("Failed to save local DB state:", err);
   }
@@ -231,7 +238,19 @@ function generateReferralCode(existingCodes: string[] = []): string {
 }
 
 async function startServer() {
-  const db = loadDB();
+  console.log("iAgri Server: Connecting to Supabase and pulling main database state...");
+  const supabaseDb = await loadStateFromSupabase();
+  let db: DBState;
+  if (supabaseDb) {
+    db = supabaseDb;
+    console.log("iAgri Server: Main database successfully initialized and synchronized with Supabase.");
+    try {
+      fs.writeFileSync(DB_FILE, JSON.stringify(db, null, 2), "utf-8");
+    } catch (e) {}
+  } else {
+    console.warn("iAgri Server: Supabase fetch inactive or tables not created yet. Operating on local offline store.");
+    db = loadDB();
+  }
 
   // Dynamic validation: Ensure the Togo administrator always exists in the database
   const adminIdx = db.users.findIndex(u => u.whatsapp === "22890909090");
@@ -451,7 +470,7 @@ async function startServer() {
       whatsapp: cleanedWhatsapp,
       country,
       passwordHash: password, // Simulation
-      balance: 0,
+      balance: 200,
       dailyEarnings: 0,
       totalEarnings: 0,
       totalDeposits: 0,
@@ -469,8 +488,8 @@ async function startServer() {
     db.notifications.push({
       id: "notif-welcome-" + userId,
       userId: userId,
-      title: "Inscription réussie",
-      message: `Heureux de vous compter parmi nous, ${finalName} ! Profitez d'un bonus de bienvenue en insérant le code BIENVENUE dans la section correspondante !`,
+      title: "Inscription réussie + Bonus 🎁",
+      message: `Heureux de vous compter parmi nous, ${finalName} ! Un bonus d'inscription de 200 FCFA a été crédité sur votre solde ! Profitez également de notre code BIENVENUE pour obtenir plus de bonus !`,
       date: new Date().toISOString(),
       readBy: []
     });
@@ -769,6 +788,10 @@ async function startServer() {
       return res.status(404).json({ error: "Produit ou Plan d'investissement non trouvé." });
     }
 
+    if (product.isBlocked) {
+      return res.status(400).json({ error: "Ce produit/plan d'investissement est temporairement bloqué ou indisponible pour de nouveaux achats." });
+    }
+
     const maxAllowed = (product as any).maxPurchaseCount !== undefined ? (product as any).maxPurchaseCount : 3;
     const currentPurchased = db.investments.filter(i => i.userId === userId && i.planId === productId).length;
     if (currentPurchased >= maxAllowed) {
@@ -793,6 +816,7 @@ async function startServer() {
       dailyReturn: product.dailyReturn,
       totalWeeks: Math.ceil(product.durationDays / 7),
       daysActive: 0,
+      durationDays: product.durationDays,
       totalReturn: product.totalReturn,
       purchaseDate: new Date().toISOString(),
       lastClaimDate: new Date().toISOString()
@@ -1361,6 +1385,9 @@ async function startServer() {
   app.delete("/api/admin/products/:productId", (req, res) => {
     const { productId } = req.params;
     db.products = db.products.filter(p => p.id !== productId);
+    deleteProductFromSupabase(productId).catch(err => {
+      console.warn("Soft warning: failed to delete product from Supabase:", err.message);
+    });
     saveDB(db);
     res.json({ success: true, message: "Produit supprimé avec succès." });
   });
@@ -1389,6 +1416,17 @@ async function startServer() {
       maxPurchaseCount: maxPurchaseCount !== undefined && maxPurchaseCount !== null ? parseInt(maxPurchaseCount) : 3
     };
 
+    saveDB(db);
+    res.json({ success: true, product: db.products[pIdx] });
+  });
+
+  app.put("/api/admin/products/:productId/toggle-block", (req, res) => {
+    const { productId } = req.params;
+    const pIdx = db.products.findIndex(p => p.id === productId);
+    if (pIdx === -1) {
+      return res.status(404).json({ error: "Produit non trouvé" });
+    }
+    db.products[pIdx].isBlocked = !db.products[pIdx].isBlocked;
     saveDB(db);
     res.json({ success: true, product: db.products[pIdx] });
   });
@@ -1497,6 +1535,19 @@ async function startServer() {
     console.error("Express App Error Global handler:", err);
     res.status(500).json({ error: "Internal Server Error" });
   });
+
+  // Automated background scheduler for processing VIP daily payouts exactly every 24h
+  setInterval(() => {
+    try {
+      db.users.forEach((u) => {
+        if (!u.isAdmin) {
+          processDailyEarnings(u.id);
+        }
+      });
+    } catch (e) {
+      console.error("Error in automatic payout schedule:", e);
+    }
+  }, 10000);
 
   app.listen(PORT, "0.0.0.0", () => {
     console.log(`Server started successfully on port ${PORT}`);

@@ -40,6 +40,7 @@ import {
   fetchPlatformSettings
 } from "../api";
 import { User, Investment, Deposit, Withdrawal, Notification, ChatMessage, Product } from "../types";
+import { supabase } from "../supabase";
 
 interface DashboardViewProps {
   userId: string;
@@ -244,6 +245,88 @@ export default function DashboardView({ userId, onLogout, lang, onNavigate }: Da
     return () => clearInterval(refInterval);
   }, [userId]);
 
+  // Supabase Real-time subscriptions for instant server-client synchronisation
+  useEffect(() => {
+    if (!supabase || !userId) return;
+
+    // 1. Subscribe to users profile changes
+    const usersChannel = supabase
+      .channel(`user-profile-${userId}`)
+      .on(
+        "postgres_changes",
+        {
+          event: "UPDATE",
+          schema: "public",
+          table: "users",
+          filter: `id=eq.${userId}`
+        },
+        (payload) => {
+          console.log("Supabase Realtime: User profile updated!", payload.new);
+          setProfile((prev: any) => {
+            if (!prev) return prev;
+            return {
+              ...prev,
+              balance: Number(payload.new.balance),
+              dailyEarnings: Number(payload.new.daily_earnings),
+              totalEarnings: Number(payload.new.total_earnings),
+              totalDeposits: Number(payload.new.total_deposits),
+              totalWithdrawals: Number(payload.new.total_withdrawals),
+              status: payload.new.status,
+              bonusPoints: Number(payload.new.bonus_points),
+              lastDailyCheckin: payload.new.last_daily_checkin
+            };
+          });
+        }
+      )
+      .subscribe();
+
+    // 2. Subscribe to support tickets for instant chat updates
+    const ticketsChannel = supabase
+      .channel(`user-chat-${userId}`)
+      .on(
+        "postgres_changes",
+        {
+          event: "INSERT",
+          schema: "public",
+          table: "tickets",
+          filter: `user_id=eq.${userId}`
+        },
+        () => {
+          console.log("Supabase Realtime: New chat message received!");
+          loadChatHistory();
+        }
+      )
+      .subscribe();
+
+    // 3. Subscribe to notifications
+    const notificationsChannel = supabase
+      .channel(`user-notifications-${userId}`)
+      .on(
+        "postgres_changes",
+        {
+          event: "INSERT",
+          schema: "public",
+          table: "notifications"
+        },
+        (payload) => {
+          if (payload.new.user_id === "all" || payload.new.user_id === userId) {
+            console.log("Supabase Realtime: New notification received!");
+            fetchUserNotifications(userId).then(data => {
+              setNotifications(data.notifications);
+              setUnreadNotifications(data.unreadCount);
+            }).catch(() => {});
+          }
+        }
+      )
+      .subscribe();
+
+    return () => {
+      supabase.removeChannel(usersChannel);
+      supabase.removeChannel(ticketsChannel);
+      supabase.removeChannel(notificationsChannel);
+    };
+  }, [userId]);
+
   // Handle cyclic motivational activity notifications
   useEffect(() => {
     const MOTIVATION_POOL = [
@@ -321,6 +404,12 @@ export default function DashboardView({ userId, onLogout, lang, onNavigate }: Da
       const nextMap: Record<string, string> = {};
 
       investments.forEach((inv) => {
+        const durationLimit = inv.durationDays || (inv.totalReturn / inv.dailyReturn) || 10;
+        if (inv.daysActive >= durationLimit) {
+          nextMap[inv.id] = lang === "fr" ? "Terminé (Rendement total collecté) ✅" : "Completed ✅";
+          return;
+        }
+
         const lastClaimDate = new Date(inv.lastClaimDate).getTime();
         const nextClaimDate = lastClaimDate + 24 * 60 * 60 * 1000;
         const diffMs = nextClaimDate - now;
@@ -1277,26 +1366,47 @@ export default function DashboardView({ userId, onLogout, lang, onNavigate }: Da
                             </div>
 
                             {/* Active bar progress to look high fidelity */}
-                            <div className="space-y-2">
-                              <div className="flex justify-between text-xs font-mono text-slate-300">
-                                <span className="font-bold">Rendement Planifié : {inv.daysActive} jours sur 10</span>
-                                <span className="font-bold text-emerald-400">{Math.round((inv.daysActive / 10) * 100)}%</span>
-                              </div>
-                              <div className="w-full bg-[#020617] h-2 rounded-full overflow-hidden">
-                                <div 
-                                  className="h-full bg-gradient-to-r from-[#D4AF37] to-yellow-400 rounded-full"
-                                  style={{ width: `${Math.min(100, (inv.daysActive / 10) * 100)}%` }}
-                                ></div>
-                              </div>
-                              
-                              {/* Realtime countdown ticket indicator */}
-                              <div className="pt-1.5 flex justify-between items-center text-[11px] font-sans">
-                                <span className="text-slate-400 font-semibold">Prochain versement (24h) :</span>
-                                <span className="text-[#D4AF37] font-bold bg-[#D4AF37]/10 px-2 py-0.5 rounded border border-[#D4AF37]/15 font-mono animate-pulse">
-                                  {countdowns[inv.id] || "00h 00m 00s"}
-                                </span>
-                              </div>
-                            </div>
+                            {(() => {
+                              const durationLimit = inv.durationDays || (inv.totalReturn / inv.dailyReturn) || 10;
+                              const isFinished = inv.daysActive >= durationLimit;
+                              const getNextClaimTimeStr = (lastClaimIso: string) => {
+                                const nextDate = new Date(new Date(lastClaimIso).getTime() + 24 * 60 * 60 * 1000);
+                                return nextDate.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit', second: '2-digit' }) + ' (' + nextDate.toLocaleDateString([], { day: '2-digit', month: '2-digit' }) + ')';
+                              };
+
+                              return (
+                                <div className="space-y-2">
+                                  <div className="flex justify-between text-xs font-mono text-slate-300">
+                                    <span className="font-bold">Rendement Planifié : {inv.daysActive} jours sur {durationLimit}</span>
+                                    <span className="font-bold text-emerald-400">{Math.round((inv.daysActive / durationLimit) * 100)}%</span>
+                                  </div>
+                                  <div className="w-full bg-[#020617] h-2 rounded-full overflow-hidden">
+                                    <div 
+                                      className="h-full bg-gradient-to-r from-[#D4AF37] to-yellow-400 rounded-full"
+                                      style={{ width: `${Math.min(100, (inv.daysActive / durationLimit) * 100)}%` }}
+                                    ></div>
+                                  </div>
+                                  
+                                  {/* Realtime countdown ticket indicator */}
+                                  <div className="pt-2 flex flex-col gap-1.5 text-[11px] font-sans border-t border-white/5 mt-1.5 text-left">
+                                    {!isFinished && (
+                                      <div className="flex justify-between items-center">
+                                        <span className="text-slate-400 font-semibold">Heure exacte du gain :</span>
+                                        <span className="text-white font-bold font-mono">
+                                          {getNextClaimTimeStr(inv.lastClaimDate)}
+                                        </span>
+                                      </div>
+                                    )}
+                                    <div className="flex justify-between items-center">
+                                      <span className="text-slate-400 font-semibold">Prochain versement (24h) :</span>
+                                      <span className="text-[#D4AF37] font-bold bg-[#D4AF37]/10 px-2 py-0.5 rounded border border-[#D4AF37]/15 font-mono animate-pulse">
+                                        {countdowns[inv.id] || "00h 00m 00s"}
+                                      </span>
+                                    </div>
+                                  </div>
+                                </div>
+                              );
+                            })()}
                           </div>
                         );
                       })}
@@ -1349,18 +1459,30 @@ export default function DashboardView({ userId, onLogout, lang, onNavigate }: Da
                       return (
                         <div 
                           key={prod.id} 
-                          className="bg-[#0A0E17] border border-[#D4AF37]/20 rounded-[32px] p-6 relative overflow-hidden group hover:border-[#D4AF37] transition duration-300 gold-glow"
+                          className={`bg-[#0A0E17] border rounded-[32px] p-6 relative overflow-hidden group transition duration-300 ${
+                            prod.isBlocked 
+                              ? "border-red-500/20 bg-gradient-to-b from-[#140a0c] to-[#0A0E17] opacity-95" 
+                              : "border-[#D4AF37]/20 hover:border-[#D4AF37] gold-glow"
+                          }`}
                         >
-                          {prod.badge && (
+                          {prod.isBlocked ? (
+                            <div className="absolute top-0 right-0 bg-red-600 text-white font-mono text-[9px] font-extrabold px-3 py-1 bg-red-600 rounded-bl-xl uppercase tracking-widest animate-pulse shadow-lg select-none">
+                              Indisponible 🚫
+                            </div>
+                          ) : prod.badge ? (
                             <div className="absolute top-0 right-0 bg-gradient-to-r from-[#D4AF37] to-yellow-400 text-black font-mono text-[9px] font-bold px-3 py-1 rounded-bl-xl uppercase tracking-wider scale-95 origin-top-right">
                               {prod.badge}
                             </div>
-                          )}
+                          ) : null}
 
                           <div className="space-y-1.5">
                             <div className="flex justify-between items-start gap-2">
                               <h3 className="text-sm font-extrabold text-white uppercase tracking-wide">{prod.name}</h3>
-                              {(() => {
+                              {prod.isBlocked ? (
+                                <span className="text-[9px] font-mono font-extrabold px-2 py-0.5 rounded shrink-0 bg-red-500/15 text-red-400 border border-red-500/20 uppercase tracking-wide">
+                                  Indisponible 🚫
+                                </span>
+                              ) : (() => {
                                 const maxAllowed = prod.maxPurchaseCount !== undefined ? prod.maxPurchaseCount : 3;
                                 const activePurchases = investments.filter(inv => inv.planId === prod.id).length;
                                 return (
@@ -1401,6 +1523,13 @@ export default function DashboardView({ userId, onLogout, lang, onNavigate }: Da
                             </span>
 
                             {(() => {
+                              if (prod.isBlocked) {
+                                return (
+                                  <span className="px-5 py-2.5 rounded-xl text-xs font-bold font-mono tracking-widest bg-red-900/20 text-red-400 border border-red-500/15 shadow-none uppercase select-none cursor-not-allowed">
+                                    Indisponible 🚫
+                                  </span>
+                                );
+                              }
                               const maxAllowed = prod.maxPurchaseCount !== undefined ? prod.maxPurchaseCount : 3;
                               const activePurchases = investments.filter(inv => inv.planId === prod.id).length;
                               const limitReached = activePurchases >= maxAllowed;
