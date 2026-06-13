@@ -1,3 +1,6 @@
+import dotenv from "dotenv";
+dotenv.config();
+
 import express from "express";
 import path from "path";
 import fs from "fs";
@@ -236,11 +239,13 @@ function generateReferralCode(existingCodes: string[] = []): string {
 }
 
 async function startServer() {
+  let isSupabaseHealthy = false;
   console.log("iAgri Server: Connecting to Supabase and pulling main database state...");
   const supabaseDb = await loadStateFromSupabase();
   let db: DBState;
   if (supabaseDb) {
     db = supabaseDb;
+    isSupabaseHealthy = true;
     console.log("iAgri Server: Main database successfully initialized and synchronized with Supabase.");
     try {
       fs.writeFileSync(DB_FILE, JSON.stringify(db, null, 2), "utf-8");
@@ -316,6 +321,7 @@ async function startServer() {
     try {
       const supabaseDb = await loadStateFromSupabase();
       if (supabaseDb) {
+        isSupabaseHealthy = true;
         // Merge users: keep any users from local db that aren't in Supabase, and update existing ones from Supabase
         const mergedUsers = [...supabaseDb.users];
         for (const localUser of db.users) {
@@ -387,8 +393,11 @@ async function startServer() {
         try {
           fs.writeFileSync(DB_FILE, JSON.stringify(db, null, 2), "utf-8");
         } catch (e) {}
+      } else {
+        isSupabaseHealthy = false;
       }
     } catch (e: any) {
+      isSupabaseHealthy = false;
       console.warn("Soft warning: failed to pull dynamic state from Supabase during request:", e.message);
     }
   };
@@ -1226,7 +1235,8 @@ async function startServer() {
       totalWithdrawalsSubmitted,
       pendingWithdrawals,
       approvedWithdrawalsSum,
-      activeInvestmentSum
+      activeInvestmentSum,
+      supabaseHealthy: isSupabaseHealthy
     });
   });
 

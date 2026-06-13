@@ -7,7 +7,7 @@ const supabaseUrl = (typeof process !== "undefined" && process?.env?.SUPABASE_UR
 
 const supabaseKey = (typeof process !== "undefined" && process?.env?.SUPABASE_KEY) || 
                     (typeof import.meta !== "undefined" && (import.meta as any)?.env?.VITE_SUPABASE_KEY) || 
-                    "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Im9wZ3Rtc3NnZHNqaHhqcXl3Z3loIiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODEzMjk1NTUsImV4cCI6MjA5NjkwNTU1NX0.r1xlXBCBh_0x2A-Pn8PsxO-YJiZyaCsTP2Xa7Rp1rko";
+                    "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Im9wZ3Rtc3NnZHNqaHhqcXl3Z3loIiwicm9sZSI6InNlcnZpY2Vfcm9sZSIsImlhdCI6MTc4MTMyOTU1NSwiZXhwIjoyMDk2OTA1NTU1fQ.8NeQ77-B8A_K2xTzEPkdxfPLJbhKYL0uDAUm-aQNuOo";
 
 export const supabase = createClient(supabaseUrl, supabaseKey);
 
@@ -37,6 +37,18 @@ export async function loadStateFromSupabase(): Promise<any> {
       console.warn("iAgri Supabase: Base tables are missing. Please execute the SQL schema in your Supabase SQL Editor.");
       return null;
     }
+
+    // Explicitly log any table query errors for diagnostic visibility in logs
+    if (uRes.error) console.error("iAgri Supabase load warning (users):", uRes.error);
+    if (pRes.error) console.error("iAgri Supabase load warning (products):", pRes.error);
+    if (iRes.error) console.error("iAgri Supabase load warning (investments):", iRes.error);
+    if (dRes.error) console.error("iAgri Supabase load warning (deposits):", dRes.error);
+    if (wRes.error) console.error("iAgri Supabase load warning (withdrawals):", wRes.error);
+    if (cRes.error) console.error("iAgri Supabase load warning (referral_commissions):", cRes.error);
+    if (tRes.error) console.error("iAgri Supabase load warning (tickets):", tRes.error);
+    if (nRes.error) console.error("iAgri Supabase load warning (notifications):", nRes.error);
+    if (bRes.error) console.error("iAgri Supabase load warning (bonus_codes):", bRes.error);
+    if (sRes.error) console.error("iAgri Supabase load warning (settings):", sRes.error);
 
     const users = (uRes.data || []).map((u: any) => ({
       id: u.id,
@@ -170,6 +182,25 @@ export async function loadStateFromSupabase(): Promise<any> {
   }
 }
 
+// Helper to handle upserts safely with individual row fallback upon general failure
+async function upsertWithFallback(table: string, rows: any[], idField: string = "id"): Promise<boolean> {
+  if (!rows || rows.length === 0) return true;
+  const { error } = await supabase.from(table).upsert(rows);
+  if (error) {
+    console.warn(`iAgri Supabase: Batch upsert on table "${table}" failed (${error.message || error}). Trying row-by-row fallback...`);
+    let someFailed = false;
+    for (const row of rows) {
+      const { error: rowError } = await supabase.from(table).upsert(row);
+      if (rowError) {
+        console.error(`iAgri Supabase Error: Row upsert FAILED in table "${table}" for ${idField}="${row[idField]}":`, rowError.message || rowError);
+        someFailed = true;
+      }
+    }
+    return !someFailed;
+  }
+  return true;
+}
+
 // Bi-directional state pushes
 export async function saveStateToSupabase(state: any): Promise<boolean> {
   let isAllSuccessful = true;
@@ -196,8 +227,8 @@ export async function saveStateToSupabase(state: any): Promise<boolean> {
         is_admin: !!u.isAdmin,
         last_daily_checkin: u.lastDailyCheckin || null
       }));
-      const { error } = await supabase.from("users").upsert(usersRows);
-      if (error) throw error;
+      const ok = await upsertWithFallback("users", usersRows, "id");
+      if (!ok) isAllSuccessful = false;
     }
   } catch (err: any) {
     console.error("iAgri Supabase save warning (users):", err.message);
@@ -218,8 +249,8 @@ export async function saveStateToSupabase(state: any): Promise<boolean> {
         max_purchase_count: p.maxPurchaseCount,
         is_blocked: !!p.isBlocked
       }));
-      const { error } = await supabase.from("products").upsert(productsRows);
-      if (error) throw error;
+      const ok = await upsertWithFallback("products", productsRows, "id");
+      if (!ok) isAllSuccessful = false;
     }
   } catch (err: any) {
     console.error("iAgri Supabase save warning (products):", err.message);
@@ -243,8 +274,8 @@ export async function saveStateToSupabase(state: any): Promise<boolean> {
         last_claim_date: inv.lastClaimDate,
         duration_days: inv.durationDays || 10
       }));
-      const { error } = await supabase.from("investments").upsert(investmentsRows);
-      if (error) throw error;
+      const ok = await upsertWithFallback("investments", investmentsRows, "id");
+      if (!ok) isAllSuccessful = false;
     }
   } catch (err: any) {
     console.error("iAgri Supabase save warning (investments):", err.message);
@@ -265,8 +296,8 @@ export async function saveStateToSupabase(state: any): Promise<boolean> {
         status: d.status,
         date: d.date
       }));
-      const { error } = await supabase.from("deposits").upsert(depositsRows);
-      if (error) throw error;
+      const ok = await upsertWithFallback("deposits", depositsRows, "id");
+      if (!ok) isAllSuccessful = false;
     }
   } catch (err: any) {
     console.error("iAgri Supabase save warning (deposits):", err.message);
@@ -285,8 +316,8 @@ export async function saveStateToSupabase(state: any): Promise<boolean> {
         status: w.status,
         date: w.date
       }));
-      const { error } = await supabase.from("withdrawals").upsert(withdrawalsRows);
-      if (error) throw error;
+      const ok = await upsertWithFallback("withdrawals", withdrawalsRows, "id");
+      if (!ok) isAllSuccessful = false;
     }
   } catch (err: any) {
     console.error("iAgri Supabase save warning (withdrawals):", err.message);
@@ -304,8 +335,8 @@ export async function saveStateToSupabase(state: any): Promise<boolean> {
         level: c.level,
         date: c.date
       }));
-      const { error } = await supabase.from("referral_commissions").upsert(commRows);
-      if (error) throw error;
+      const ok = await upsertWithFallback("referral_commissions", commRows, "id");
+      if (!ok) isAllSuccessful = false;
     }
   } catch (err: any) {
     console.error("iAgri Supabase save warning (referralCommissions):", err.message);
@@ -322,8 +353,8 @@ export async function saveStateToSupabase(state: any): Promise<boolean> {
         message: t.message,
         date: t.date
       }));
-      const { error } = await supabase.from("tickets").upsert(ticketsRows);
-      if (error) throw error;
+      const ok = await upsertWithFallback("tickets", ticketsRows, "id");
+      if (!ok) isAllSuccessful = false;
     }
   } catch (err: any) {
     console.error("iAgri Supabase save warning (tickets):", err.message);
@@ -341,8 +372,8 @@ export async function saveStateToSupabase(state: any): Promise<boolean> {
         date: n.date,
         read_by: n.readBy || []
       }));
-      const { error } = await supabase.from("notifications").upsert(notRows);
-      if (error) throw error;
+      const ok = await upsertWithFallback("notifications", notRows, "id");
+      if (!ok) isAllSuccessful = false;
     }
   } catch (err: any) {
     console.error("iAgri Supabase save warning (notifications):", err.message);
@@ -359,8 +390,8 @@ export async function saveStateToSupabase(state: any): Promise<boolean> {
         created_by: b.created_by,
         usage_limit: b.usageLimit || 100
       }));
-      const { error } = await supabase.from("bonus_codes").upsert(bonusRows);
-      if (error) throw error;
+      const ok = await upsertWithFallback("bonus_codes", bonusRows, "code");
+      if (!ok) isAllSuccessful = false;
     }
   } catch (err: any) {
     console.error("iAgri Supabase save warning (bonusCodes):", err.message);

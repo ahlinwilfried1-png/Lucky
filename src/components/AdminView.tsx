@@ -67,7 +67,8 @@ export default function AdminView({ adminUserId, onExit, lang }: AdminViewProps)
     totalWithdrawalsSubmitted: 0,
     pendingWithdrawals: 0,
     approvedWithdrawalsSum: 0,
-    activeInvestmentSum: 0
+    activeInvestmentSum: 0,
+    supabaseHealthy: true as boolean | undefined
   });
 
   // Lists
@@ -805,6 +806,25 @@ export default function AdminView({ adminUserId, onExit, lang }: AdminViewProps)
           <div className="space-y-6">
             <h2 className="text-sm font-bold font-mono text-red-600 uppercase tracking-widest">Calculs Financiers Plateforme</h2>
             
+            {stats.supabaseHealthy === false && (
+              <div className="bg-amber-500/10 border border-amber-500/20 rounded-2xl p-5 space-y-3">
+                <div className="flex items-start gap-3">
+                  <span className="text-2xl shrink-0">⚠️</span>
+                  <div className="space-y-1">
+                    <h3 className="text-sm font-bold text-amber-500 uppercase font-mono">
+                      ALERTE SYNCHRONISATION : TABLE(S) SUPABASE MANQUANTE(S) OU ERREUR DE CONNEXION !
+                    </h3>
+                    <p className="text-xs text-slate-300 leading-relaxed">
+                      L'application fonctionne actuellement en mode **stockage local temporaire**. Les inscriptions d'utilisateurs sur d'autres navigateurs ou téléphones **ne sont pas synchronisées** et seront perdues lors d'un redémarrage du serveur.
+                    </p>
+                    <p className="text-[11px] text-slate-400 leading-relaxed font-mono">
+                      Pour activer la synchronisation globale, veuillez copier le contenu du fichier <code className="bg-slate-800 text-amber-400 px-1 py-0.5 rounded text-[10px] font-mono">supabase_schema.sql</code> (situé à la racine de votre projet) et l'exécuter dans l'éditeur de requêtes SQL (<span className="underline font-sans">SQL Editor</span>) de votre tableau de bord Supabase.
+                    </p>
+                  </div>
+                </div>
+              </div>
+            )}
+
             <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
               <div className="bg-white border border-slate-200/60 rounded-2xl p-5 shadow-sm hover:shadow-md transition duration-200">
                 <span className="text-[10px] text-slate-500 font-mono block uppercase font-bold">Total Dépôts Cumulés</span>
