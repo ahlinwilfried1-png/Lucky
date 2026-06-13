@@ -184,3 +184,17 @@ VALUES
 ('admin-master', 'Administrateur Suprême', '22890909090', 'Togo', 'AdminTogo2026*', 1000000, 0, 0, 1000000, 0, 'active', 'ADMIN228', null, 0, true),
 ('admin-wilfried', 'Administrateur Wilfried', '22870903319', 'Togo', 'AdminWilfried2026*', 1000000, 0, 0, 1000000, 0, 'active', 'WILF228', null, 0, true)
 ON CONFLICT (id) DO NOTHING;
+
+-- 11. Disable Row Level Security (RLS) on all tables to ensure write sync from other devices
+-- Customarily, Supabase activates RLS by default on new tables which blocks INSERT/UPSERT of new registered accounts.
+ALTER TABLE IF EXISTS public.users DISABLE ROW LEVEL SECURITY;
+ALTER TABLE IF EXISTS public.products DISABLE ROW LEVEL SECURITY;
+ALTER TABLE IF EXISTS public.investments DISABLE ROW LEVEL SECURITY;
+ALTER TABLE IF EXISTS public.deposits DISABLE ROW LEVEL SECURITY;
+ALTER TABLE IF EXISTS public.withdrawals DISABLE ROW LEVEL SECURITY;
+ALTER TABLE IF EXISTS public.referral_commissions DISABLE ROW LEVEL SECURITY;
+ALTER TABLE IF EXISTS public.tickets DISABLE ROW LEVEL SECURITY;
+ALTER TABLE IF EXISTS public.notifications DISABLE ROW LEVEL SECURITY;
+ALTER TABLE IF EXISTS public.bonus_codes DISABLE ROW LEVEL SECURITY;
+ALTER TABLE IF EXISTS public.settings DISABLE ROW LEVEL SECURITY;
+

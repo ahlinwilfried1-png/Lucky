@@ -191,15 +191,13 @@ function loadDB(): DBState {
   return defaultState;
 }
 
-function saveDB(state: DBState) {
+async function saveDB(state: DBState) {
   try {
     fs.writeFileSync(DB_FILE, JSON.stringify(state, null, 2), "utf-8");
-    // Replicate state update to Supabase in the background
-    saveStateToSupabase(state).catch(err => {
-      console.warn("Soft warning: failed to sync state to Supabase:", err.message);
-    });
-  } catch (err) {
-    console.error("Failed to save local DB state:", err);
+    // Replicate state update to Supabase
+    await saveStateToSupabase(state);
+  } catch (err: any) {
+    console.error("Failed to save local DB state and sync to Supabase:", err);
   }
 }
 
@@ -273,7 +271,7 @@ async function startServer() {
       created_at: new Date().toISOString(),
       isAdmin: true
     });
-    saveDB(db);
+    await saveDB(db);
   } else {
     // Always keep Togo administrative credentials updated
     db.users[adminIdx].whatsapp = "22890909090";
@@ -281,7 +279,7 @@ async function startServer() {
     db.users[adminIdx].name = "Administrateur Suprême";
     db.users[adminIdx].passwordHash = "AdminTogo2026*";
     db.users[adminIdx].isAdmin = true;
-    saveDB(db);
+    await saveDB(db);
   }
 
   // Ensure Wilfried Togo administrator exists as requested
@@ -305,13 +303,13 @@ async function startServer() {
       created_at: new Date().toISOString(),
       isAdmin: true
     });
-    saveDB(db);
+    await saveDB(db);
   } else {
     db.users[wilfriedIdx].isAdmin = true;
     db.users[wilfriedIdx].passwordHash = "AdminWilfried2026*";
     db.users[wilfriedIdx].name = "Administrateur Wilfried";
     db.users[wilfriedIdx].status = "active";
-    saveDB(db);
+    await saveDB(db);
   }
 
   const syncFromSupabase = async () => {
@@ -402,7 +400,7 @@ async function startServer() {
   app.use(express.urlencoded({ extended: true, limit: "15mb" }));
 
   // Helper: auto claim user investment profits due daily
-  const processDailyEarnings = (userId: string) => {
+  const processDailyEarnings = async (userId: string) => {
     let changed = false;
     const now = new Date();
     db.investments = db.investments.map((inv) => {
@@ -450,7 +448,7 @@ async function startServer() {
     });
 
     if (changed) {
-      saveDB(db);
+      await saveDB(db);
     }
   };
 
@@ -589,7 +587,7 @@ async function startServer() {
       });
     }
 
-    saveDB(db);
+    await saveDB(db);
 
     res.json({
       success: true,
@@ -631,7 +629,7 @@ async function startServer() {
     }
 
     // Trigger update logic for income of this user
-    processDailyEarnings(user.id);
+    await processDailyEarnings(user.id);
 
     res.json({
       success: true,
@@ -659,7 +657,7 @@ async function startServer() {
     }
 
     db.users[userIndex].passwordHash = newPassword;
-    saveDB(db);
+    await saveDB(db);
     res.json({ success: true, message: "Mot de passe réinitialisé avec succès !" });
   });
 
@@ -667,7 +665,7 @@ async function startServer() {
   app.get("/api/user/profile/:userId", async (req, res) => {
     await syncFromSupabase();
     const { userId } = req.params;
-    processDailyEarnings(userId);
+    await processDailyEarnings(userId);
 
     const user = db.users.find(u => u.id === userId);
     if (!user) {
@@ -780,7 +778,7 @@ async function startServer() {
       readBy: []
     });
 
-    saveDB(db);
+    await saveDB(db);
 
     res.json({
       success: true,
@@ -837,7 +835,7 @@ async function startServer() {
       readBy: []
     });
 
-    saveDB(db);
+    await saveDB(db);
 
     res.json({
       success: true,
@@ -1013,7 +1011,7 @@ async function startServer() {
       }
     }
 
-    saveDB(db);
+    await saveDB(db);
 
     res.json({
       success: true,
@@ -1066,7 +1064,7 @@ async function startServer() {
       readBy: []
     });
 
-    saveDB(db);
+    await saveDB(db);
 
     res.json({
       success: true,
@@ -1108,7 +1106,7 @@ async function startServer() {
       readBy: []
     });
 
-    saveDB(db);
+    await saveDB(db);
     res.json({ success: true, reward: rewardEarned, newBalance: db.users[userIdx].balance });
   });
 
@@ -1132,7 +1130,7 @@ async function startServer() {
   });
 
   // Mark all read
-  app.post("/api/user/notifications/read", (req, res) => {
+  app.post("/api/user/notifications/read", async (req, res) => {
     const { userId } = req.body;
     if (!userId) return res.status(400).json({ error: "User ID required" });
 
@@ -1143,7 +1141,7 @@ async function startServer() {
       return n;
     });
 
-    saveDB(db);
+    await saveDB(db);
     res.json({ success: true });
   });
 
@@ -1167,7 +1165,7 @@ async function startServer() {
 
     // Dynamic auto-assistant answers with advice if sent by user
     if (sender === "user") {
-      setTimeout(() => {
+      setTimeout(async () => {
         const supportResponses = [
           "Bonjour! Un agent de support financier va examiner votre demande d'ici peu. Pour accélérer la validation de votre dépôt, assurez-vous d'avoir téléchargé la capture écran de paiement exacte avec la référence correcte.",
           "Félicitations pour votre choix d'investissement! Les bonus de parrainage de 10% (Niveau 1) et 5% (Niveau 2) sont crédités directement.",
@@ -1183,11 +1181,11 @@ async function startServer() {
           date: new Date().toISOString()
         };
         db.tickets.push(autoMsg);
-        saveDB(db);
+        await saveDB(db);
       }, 3000);
     }
 
-    saveDB(db);
+    await saveDB(db);
     res.json({ success: true, message: newMessage });
   });
 
@@ -1249,7 +1247,7 @@ async function startServer() {
   });
 
   // Admin: Update User account (Balance, Add Bonus points, status block)
-  app.post("/api/admin/users/action", (req, res) => {
+  app.post("/api/admin/users/action", async (req, res) => {
     const { targetUserId, action, amount } = req.body;
 
     const idx = db.users.findIndex(u => u.id === targetUserId);
@@ -1273,7 +1271,7 @@ async function startServer() {
         return inv;
       });
       // Immediately run processDailyEarnings to trigger daily credit
-      processDailyEarnings(targetUserId);
+      await processDailyEarnings(targetUserId);
     } else if (action === "add_balance") {
       const parsed = parseFloat(amount);
       if (!isNaN(parsed)) {
@@ -1315,7 +1313,7 @@ async function startServer() {
       db.users[idx].isAdmin = !db.users[idx].isAdmin;
     }
 
-    saveDB(db);
+    await saveDB(db);
     res.json({ success: true, message: `Action ${action} effectuée avec succès.` });
   });
 
@@ -1332,7 +1330,7 @@ async function startServer() {
     res.json({ deposits: sorted });
   });
 
-  app.post("/api/admin/deposits/action", (req, res) => {
+  app.post("/api/admin/deposits/action", async (req, res) => {
     const { depositId, action } = req.body;
     if (!depositId || !action) {
       return res.status(400).json({ error: "Informations requises manquantes." });
@@ -1381,7 +1379,7 @@ async function startServer() {
       });
     }
 
-    saveDB(db);
+    await saveDB(db);
     res.json({ success: true, message: `Dépôt mis à jour avec le statut: ${db.deposits[dIdx].status}` });
   });
 
@@ -1399,7 +1397,7 @@ async function startServer() {
     res.json({ withdrawals: sorted });
   });
 
-  app.post("/api/admin/withdrawals/action", (req, res) => {
+  app.post("/api/admin/withdrawals/action", async (req, res) => {
     const { withdrawalId, action } = req.body;
     if (!withdrawalId || !action) {
       return res.status(400).json({ error: "Informations requises manquantes." });
@@ -1448,7 +1446,7 @@ async function startServer() {
       });
     }
 
-    saveDB(db);
+    await saveDB(db);
     res.json({ success: true, message: `Retrait mis à jour avec le statut: ${db.withdrawals[wIdx].status}` });
   });
 
@@ -1458,7 +1456,7 @@ async function startServer() {
     res.json({ products: db.products });
   });
 
-  app.post("/api/admin/products", (req, res) => {
+  app.post("/api/admin/products", async (req, res) => {
     const { name, price, dailyReturn, durationDays, badge, maxPurchaseCount } = req.body;
     if (!name || !price || !dailyReturn || !durationDays) {
       return res.status(400).json({ error: "Remplissez tous les détails du produit." });
@@ -1476,21 +1474,21 @@ async function startServer() {
     };
 
     db.products.push(newProduct);
-    saveDB(db);
+    await saveDB(db);
     res.json({ success: true, product: newProduct });
   });
 
-  app.delete("/api/admin/products/:productId", (req, res) => {
+  app.delete("/api/admin/products/:productId", async (req, res) => {
     const { productId } = req.params;
     db.products = db.products.filter(p => p.id !== productId);
     deleteProductFromSupabase(productId).catch(err => {
       console.warn("Soft warning: failed to delete product from Supabase:", err.message);
     });
-    saveDB(db);
+    await saveDB(db);
     res.json({ success: true, message: "Produit supprimé avec succès." });
   });
 
-  app.put("/api/admin/products/:productId", (req, res) => {
+  app.put("/api/admin/products/:productId", async (req, res) => {
     const { productId } = req.params;
     const { name, price, dailyReturn, durationDays, badge, maxPurchaseCount } = req.body;
     
@@ -1514,23 +1512,23 @@ async function startServer() {
       maxPurchaseCount: maxPurchaseCount !== undefined && maxPurchaseCount !== null ? parseInt(maxPurchaseCount) : 3
     };
 
-    saveDB(db);
+    await saveDB(db);
     res.json({ success: true, product: db.products[pIdx] });
   });
 
-  app.put("/api/admin/products/:productId/toggle-block", (req, res) => {
+  app.put("/api/admin/products/:productId/toggle-block", async (req, res) => {
     const { productId } = req.params;
     const pIdx = db.products.findIndex(p => p.id === productId);
     if (pIdx === -1) {
       return res.status(404).json({ error: "Produit non trouvé" });
     }
     db.products[pIdx].isBlocked = !db.products[pIdx].isBlocked;
-    saveDB(db);
+    await saveDB(db);
     res.json({ success: true, product: db.products[pIdx] });
   });
 
   // Admin: Global Notification
-  app.post("/api/admin/notify-all", (req, res) => {
+  app.post("/api/admin/notify-all", async (req, res) => {
     const { title, message } = req.body;
     if (!title || !message) {
       return res.status(400).json({ error: "Saisissez un titre et un contenu de notification." });
@@ -1546,12 +1544,12 @@ async function startServer() {
     };
 
     db.notifications.push(globNotif);
-    saveDB(db);
+    await saveDB(db);
     res.json({ success: true, notification: globNotif });
   });
 
   // Admin: Generate Bonus Code
-  app.post("/api/admin/bonus-codes", (req, res) => {
+  app.post("/api/admin/bonus-codes", async (req, res) => {
     const { code, amount, usageLimit } = req.body;
     if (!code || !amount) {
       return res.status(400).json({ error: "Saisissez un code unique et un montant." });
@@ -1583,7 +1581,7 @@ async function startServer() {
     }
 
     db.bonusCodes.push(nBonus);
-    saveDB(db);
+    await saveDB(db);
     res.json({ success: true, bonusCode: nBonus });
   });
 
@@ -1639,9 +1637,9 @@ async function startServer() {
   // Automated background scheduler for processing VIP daily payouts exactly every 24h
   setInterval(() => {
     try {
-      db.users.forEach((u) => {
+      db.users.forEach(async (u) => {
         if (!u.isAdmin) {
-          processDailyEarnings(u.id);
+          await processDailyEarnings(u.id);
         }
       });
     } catch (e) {
