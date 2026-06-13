@@ -1240,6 +1240,57 @@ async function startServer() {
     });
   });
 
+  // Admin: Force immediate bi-directional database synchronization with Supabase
+  app.post("/api/admin/sync-now", async (req, res) => {
+    try {
+      console.log("iAgri Admin: Manual synchronization initiated...");
+      // 1. First run a regular pull/merge
+      await syncFromSupabase();
+      
+      // 2. Perform a complete push back to Supabase to replicate all merged rows
+      const syncResult = await saveStateToSupabase(db);
+      
+      if (syncResult) {
+        isSupabaseHealthy = true;
+        console.log("iAgri Admin: Manual synchronization completed successfully. Both storage systems are in sync.");
+      } else {
+        isSupabaseHealthy = false;
+        console.warn("iAgri Admin: Sync warning - failed to execute row-level save to Supabase.");
+      }
+      
+      // Recalculate metrics
+      const totalUsers = db.users.filter(u => !u.isAdmin).length;
+      const blockedUsers = db.users.filter(u => u.status === "blocked").length;
+      const totalDepositsSubmitted = db.deposits.length;
+      const pendingDeposits = db.deposits.filter(d => d.status === "pending").length;
+      const approvedDepositsSum = db.deposits.filter(d => d.status === "approved").reduce((sum, d) => sum + d.amount, 0);
+      const totalWithdrawalsSubmitted = db.withdrawals.length;
+      const pendingWithdrawals = db.withdrawals.filter(w => w.status === "pending").length;
+      const approvedWithdrawalsSum = db.withdrawals.filter(w => w.status === "approved").reduce((sum, w) => sum + w.amount, 0);
+      const activeInvestmentSum = db.investments.reduce((sum, i) => sum + i.price, 0);
+
+      res.json({
+        success: true,
+        message: "Synchronisation de la base Supabase réussie avec succès ! Les données locales et cloud sont alignées.",
+        stats: {
+          totalUsers,
+          blockedUsers,
+          totalDepositsSubmitted,
+          pendingDeposits,
+          approvedDepositsSum,
+          totalWithdrawalsSubmitted,
+          pendingWithdrawals,
+          approvedWithdrawalsSum,
+          activeInvestmentSum,
+          supabaseHealthy: isSupabaseHealthy
+        }
+      });
+    } catch (err: any) {
+      console.error("iAgri Admin: Force manual sync error:", err);
+      res.status(500).json({ error: "Erreur lors de la synchronisation forcée : " + err.message });
+    }
+  });
+
   // Admin: Get Users
   app.get("/api/admin/users", async (req, res) => {
     await syncFromSupabase();

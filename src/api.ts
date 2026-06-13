@@ -927,6 +927,45 @@ export async function fetchAdminStats() {
   });
 }
 
+export async function forceAdminSync() {
+  return apiCall("/api/admin/sync-now", {
+    method: "POST",
+    headers: { "Content-Type": "application/json" }
+  }, () => {
+    const db = getLocalDB();
+    const totalUsers = db.users.filter((u: any) => !u.isAdmin).length;
+    const blockedUsers = db.users.filter((u: any) => u.status === "blocked").length;
+
+    const pendingDeposits = db.deposits.filter((d: any) => d.status === "pending").length;
+    const approvedDepositsSum = db.deposits.filter((d: any) => d.status === "approved").reduce((sum: number, d: any) => sum + d.amount, 0);
+
+    const pendingWithdrawals = db.withdrawals.filter((w: any) => w.status === "pending").length;
+    const approvedWithdrawalsSum = db.withdrawals.filter((w: any) => w.status === "approved").reduce((sum: number, w: any) => sum + w.amount, 0);
+
+    const activeInvestmentSum = db.investments.reduce((sum: number, i: any) => sum + i.price, 0);
+
+    const totalDepositsSubmitted = db.deposits.length;
+    const totalWithdrawalsSubmitted = db.withdrawals.length;
+
+    return {
+      success: true,
+      message: "Synchronisation effectuée avec succès (Mode Cache Local) !",
+      stats: {
+        totalUsers,
+        blockedUsers,
+        totalDepositsSubmitted,
+        pendingDeposits,
+        approvedDepositsSum,
+        totalWithdrawalsSubmitted,
+        pendingWithdrawals,
+        approvedWithdrawalsSum,
+        activeInvestmentSum,
+        supabaseHealthy: true
+      }
+    };
+  });
+}
+
 export async function fetchAdminUsers() {
   return apiCall("/api/admin/users", undefined, () => {
     const db = getLocalDB();

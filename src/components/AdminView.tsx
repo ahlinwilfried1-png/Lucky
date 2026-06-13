@@ -42,7 +42,8 @@ import {
   fetchChatHistory,
   fetchPlatformSettings,
   updatePlatformSettings,
-  toggleBlockAdminProduct
+  toggleBlockAdminProduct,
+  forceAdminSync
 } from "../api";
 import { supabase } from "../supabase";
 
@@ -173,6 +174,36 @@ export default function AdminView({ adminUserId, onExit, lang }: AdminViewProps)
       setStats(data);
       setLoading(false);
     }).catch(e => console.error(e));
+  };
+
+  const [syncing, setSyncing] = useState(false);
+  const handleForceSynchronize = () => {
+    setSyncing(true);
+    setNotifyMsg("");
+    setNotifyErr("");
+    forceAdminSync()
+      .then(res => {
+        if (res.success) {
+          setNotifyMsg(res.message || "La synchronisation avec Supabase a réussi !");
+          if (res.stats) {
+            setStats(res.stats);
+          } else {
+            reloadAdminStats();
+          }
+          // Refresh lists too
+          reloadUsers();
+          reloadDeposits();
+          reloadWithdrawals();
+        } else {
+          setNotifyErr(res.error || "Échec de la synchronisation.");
+        }
+      })
+      .catch(err => {
+        setNotifyErr("Erreur lors de la synchronisation : " + (err.message || err));
+      })
+      .finally(() => {
+        setSyncing(false);
+      });
   };
 
   const reloadUsers = () => {
@@ -804,7 +835,18 @@ export default function AdminView({ adminUserId, onExit, lang }: AdminViewProps)
         {/* 1. Vue d'ensemble statistics dashboard */}
         {activeSegment === "stats" && (
           <div className="space-y-6">
-            <h2 className="text-sm font-bold font-mono text-red-600 uppercase tracking-widest">Calculs Financiers Plateforme</h2>
+            <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4 border-b border-slate-200 pb-2">
+              <h2 className="text-sm font-bold font-mono text-slate-800 uppercase tracking-widest">Calculs Financiers Plateforme 📊</h2>
+              <button
+                id="force_sync_btn"
+                onClick={handleForceSynchronize}
+                disabled={syncing}
+                className="flex items-center gap-2 px-4 py-2 bg-[#1E293B] text-white hover:bg-[#D4AF37] hover:text-black rounded-xl border border-white/10 text-xs font-mono font-bold transition duration-200 cursor-pointer disabled:opacity-50"
+              >
+                <RefreshCw className={`w-3.5 h-3.5 ${syncing ? 'animate-spin' : ''}`} />
+                <span>{syncing ? "Synchronisation en cours..." : "FORCER SYNC SUPABASE 🔄"}</span>
+              </button>
+            </div>
             
             {stats.supabaseHealthy === false && (
               <div className="bg-amber-500/10 border border-amber-500/20 rounded-2xl p-5 space-y-3">
@@ -930,43 +972,36 @@ export default function AdminView({ adminUserId, onExit, lang }: AdminViewProps)
                 </div>
                 <div className="text-xs font-mono text-slate-500 flex items-center gap-2">
                   <span className="px-2.5 py-1 rounded bg-red-50 text-red-600 font-bold border border-red-100">
-                    {filteredUsers.length} trouvé(s)
-                  </span>
-                  <span>sur {users.length} au total</span>
-                </div>
-              </div>
-            </div>
- 
-             {/* Ajuster un solde en direct drawer modal popup configuration */}
+                    {filteredUsers.length} trouv�             {/* Ajuster un solde en direct drawer modal popup configuration */}
              {selectedUser && (
-               <div className="bg-white/5 border border-amber-500/30 rounded-2xl p-5 space-y-3">
+               <div className="bg-amber-50 border border-amber-200/80 rounded-2xl p-5 space-y-3">
                  <div className="flex justify-between items-center">
-                   <h3 className="text-xs font-bold font-mono text-amber-400 uppercase">Ajustement exceptionnel de solde : {selectedUser.name}</h3>
-                   <button onClick={() => setSelectedUser(null)} className="text-gray-400 hover:text-white uppercase text-[10px] font-mono">Fermer [X]</button>
+                   <h3 className="text-xs font-bold font-mono text-amber-800 uppercase">Ajustement exceptionnel de solde : {selectedUser.name}</h3>
+                   <button onClick={() => setSelectedUser(null)} className="text-amber-700 hover:text-amber-900 uppercase text-[10px] font-mono font-bold cursor-pointer">Fermer [X]</button>
                  </div>
                  <form onSubmit={handleAddBalanceSubmit} className="flex gap-3 items-end max-w-sm">
                    <div className="flex-grow">
-                     <label className="block text-[10px] text-gray-400 font-mono mb-1">Entrer le montant (FCFA) à ajouter</label>
+                     <label className="block text-[10px] text-slate-650 font-mono mb-1">Entrer le montant (FCFA) à ajouter</label>
                      <input 
                        type="number"
                        placeholder="Ex: 5000 ou -2000"
                        value={adjustmentAmt}
                        onChange={(e) => setAdjustmentAmt(e.target.value)}
-                       className="w-full bg-[#03061A] border border-white/10 rounded-xl py-2 px-3 text-xs focus:border-red-400 outline-none font-mono"
+                       className="w-full bg-white border border-slate-250 rounded-xl py-2 px-3 text-xs focus:border-red-400 outline-none font-mono text-slate-800"
                        required
                      />
                    </div>
-                   <button type="submit" className="px-4 py-2 bg-amber-500 hover:bg-amber-600 text-black font-semibold text-xs rounded-xl">
+                   <button type="submit" className="px-4 py-2 bg-amber-500 hover:bg-amber-600 text-black font-semibold text-xs rounded-xl cursor-pointer font-bold">
                      Soumettre modification
                    </button>
                  </form>
                </div>
              )}
  
-             <div className="overflow-x-auto bg-white/5 rounded-2xl border border-white/5">
+             <div className="overflow-x-auto bg-white rounded-3xl border border-slate-200/80 shadow-sm">
                <table className="w-full text-left border-collapse text-xs">
                  <thead>
-                   <tr className="border-b border-white/10 uppercase font-mono text-gray-400 bg-white/5">
+                   <tr className="border-b border-slate-250 uppercase font-mono text-slate-500 bg-slate-50 font-bold">
                      <th className="p-4">WhatsApp / Pays</th>
                      <th className="p-4">Nom et Prénom</th>
                      <th className="p-4">Solde Actualisé</th>
@@ -976,12 +1011,16 @@ export default function AdminView({ adminUserId, onExit, lang }: AdminViewProps)
                      <th className="p-4 text-right">Actions de Modération</th>
                    </tr>
                  </thead>
-                 <tbody className="divide-y divide-white/5">
+                 <tbody className="divide-y divide-slate-100">
                    {filteredUsers.length === 0 ? (
                     <tr>
                       <td colSpan={7} className="p-8 text-center text-slate-500 font-mono text-xs">
                         ⚠️ Aucun investisseur trouvé pour "{userSearchTerm}"
                       </td>
+                    </tr>
+                  ) : (
+                    filteredUsers.map(u => (
+                      <tr key={u.id} className="hover:bg-slate-50/60 transition">>
                     </tr>
                   ) : (
                     filteredUsers.map(u => (

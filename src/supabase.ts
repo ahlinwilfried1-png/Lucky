@@ -3,11 +3,11 @@ import { createClient } from "@supabase/supabase-js";
 // Supabase API Secrets config compatible with Node and Client runtimes
 const supabaseUrl = (typeof process !== "undefined" && process?.env?.SUPABASE_URL) || 
                     (typeof import.meta !== "undefined" && (import.meta as any)?.env?.VITE_SUPABASE_URL) || 
-                    "https://opgtmssgdsjhxjqywgyh.supabase.co";
+                    "https://otjlhdridxdxupbetabe.supabase.co";
 
 const supabaseKey = (typeof process !== "undefined" && process?.env?.SUPABASE_KEY) || 
                     (typeof import.meta !== "undefined" && (import.meta as any)?.env?.VITE_SUPABASE_KEY) || 
-                    "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Im9wZ3Rtc3NnZHNqaHhqcXl3Z3loIiwicm9sZSI6InNlcnZpY2Vfcm9sZSIsImlhdCI6MTc4MTMyOTU1NSwiZXhwIjoyMDk2OTA1NTU1fQ.8NeQ77-B8A_K2xTzEPkdxfPLJbhKYL0uDAUm-aQNuOo";
+                    "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Im90amxoZHJpZHhkeHVwYmV0YWJlIiwicm9sZSI6InNlcnZpY2Vfcm9sZSIsImlhdCI6MTc4MTM0ODk1MSwiZXhwIjoyMDk2OTI0OTUxfQ.WI69yxepqu0NvYHbQF-6kSWMGKhNS0gueoioT1tuM_g";
 
 export const supabase = createClient(supabaseUrl, supabaseKey);
 
