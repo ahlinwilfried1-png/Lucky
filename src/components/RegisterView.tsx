@@ -15,7 +15,7 @@ const countryList = [
 ];
 
 export default function RegisterView({ onNavigate, lang }: RegisterViewProps) {
-  const [whatsapp, setWhatsapp] = useState("");
+  const [whatsapp, setWhatsapp] = useState("228");
   const [country, setCountry] = useState("Togo");
   const [password, setPassword] = useState("");
   const [confirmPassword, setConfirmPassword] = useState("");
@@ -54,7 +54,7 @@ export default function RegisterView({ onNavigate, lang }: RegisterViewProps) {
     setError("");
     setSuccess("");
 
-    if (!whatsapp || !password || !confirmPassword) {
+    if (!whatsapp.trim() || !password || !confirmPassword) {
       setError(lang === "fr" ? "Veuillez remplir tous les champs obligatoires (Téléphone, Mots de passe)." : "WhatsApp phone and passwords are required.");
       return;
     }
@@ -69,13 +69,19 @@ export default function RegisterView({ onNavigate, lang }: RegisterViewProps) {
       return;
     }
 
+    // Auto-formatting to ensure Togo code (228) is always active/automatic
+    let formattedPhone = whatsapp.trim().replace(/^\+/, "").replace(/\s+/g, "");
+    if (!formattedPhone.startsWith("228")) {
+      formattedPhone = "228" + formattedPhone;
+    }
+
     setLoading(true);
     try {
       // Auto-attribute premium default investor name based on WhatsApp phone number
-      const autoName = "Investisseur " + whatsapp;
+      const autoName = "Investisseur " + formattedPhone;
       await registerUser({
         name: autoName,
-        whatsapp,
+        whatsapp: formattedPhone,
         country,
         password,
         sponsorCode: sponsorCode || undefined
@@ -196,7 +202,17 @@ export default function RegisterView({ onNavigate, lang }: RegisterViewProps) {
                 type="text"
                 placeholder={lang === "fr" ? "Numéro de téléphone *" : "Phone number *"}
                 value={whatsapp}
-                onChange={(e) => setWhatsapp(e.target.value)}
+                onChange={(e) => {
+                  let val = e.target.value.replace(/[^\d+]/g, "");
+                  if (val.startsWith("+")) val = val.replace("+", "");
+                  if (val.startsWith("228")) {
+                    setWhatsapp("228" + val.substring(3));
+                  } else if (val === "" || val === "2" || val === "22") {
+                    setWhatsapp("228");
+                  } else {
+                    setWhatsapp("228" + val);
+                  }
+                }}
                 className="w-full bg-transparent border-none py-1.5 px-1 text-sm outline-none text-white focus:ring-0 placeholder:text-slate-400 font-mono"
                 required
               />

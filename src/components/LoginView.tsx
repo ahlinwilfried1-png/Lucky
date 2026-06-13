@@ -12,7 +12,7 @@ interface LoginViewProps {
 }
 
 export default function LoginView({ onNavigate, onLoginSuccess, lang }: LoginViewProps) {
-  const [whatsapp, setWhatsapp] = useState("");
+  const [whatsapp, setWhatsapp] = useState("228");
   const [password, setPassword] = useState("");
   const [error, setError] = useState("");
   const [success, setSuccess] = useState("");
@@ -20,7 +20,7 @@ export default function LoginView({ onNavigate, onLoginSuccess, lang }: LoginVie
 
   // Forgot password states
   const [showForgot, setShowForgot] = useState(false);
-  const [forgotPhone, setForgotPhone] = useState("");
+  const [forgotPhone, setForgotPhone] = useState("228");
   const [forgotNewPassword, setForgotNewPassword] = useState("");
   const [forgotConfirm, setForgotConfirm] = useState("");
 
@@ -29,14 +29,20 @@ export default function LoginView({ onNavigate, onLoginSuccess, lang }: LoginVie
     setError("");
     setSuccess("");
 
-    if (!whatsapp || !password) {
+    if (!whatsapp.trim() || !password) {
       setError(lang === "fr" ? "Veuillez renseigner votre numéro de téléphone et votre mot de passe d'accès." : "Please fill in your registered phone number and access security key.");
       return;
     }
 
+    // Auto-formatting to ensure Togo code (228) is always active/automatic
+    let formattedPhone = whatsapp.trim().replace(/^\+/, "").replace(/\s+/g, "");
+    if (!formattedPhone.startsWith("228")) {
+      formattedPhone = "228" + formattedPhone;
+    }
+
     setLoading(true);
     try {
-      const response = await loginUser({ whatsapp, password });
+      const response = await loginUser({ whatsapp: formattedPhone, password });
       setSuccess(lang === "fr" ? "Authentification réussie ! Initialisation de l'espace investisseur..." : "Authentication successful! Initializing secure investor dashboard...");
       
       setTimeout(() => {
@@ -69,11 +75,17 @@ export default function LoginView({ onNavigate, onLoginSuccess, lang }: LoginVie
       return;
     }
 
+    // Auto-formatting forgot password phone
+    let formattedForgotPhone = forgotPhone.trim().replace(/^\+/, "").replace(/\s+/g, "");
+    if (!formattedForgotPhone.startsWith("228")) {
+      formattedForgotPhone = "228" + formattedForgotPhone;
+    }
+
     try {
-      await resetPassword({ whatsapp: forgotPhone, newPassword: forgotNewPassword });
+      await resetPassword({ whatsapp: formattedForgotPhone, newPassword: forgotNewPassword });
       setSuccess(lang === "fr" ? "Clé de sécurité mise à jour avec succès !" : "Security key has been updated successfully.");
       setShowForgot(false);
-      setWhatsapp(forgotPhone);
+      setWhatsapp(formattedForgotPhone);
       setPassword(forgotNewPassword);
     } catch (err: any) {
       setError(err.message || (lang === "fr" ? "Impossible de réinitialiser la clé de sécurité." : "Unable to reset technical security keys."));
@@ -174,7 +186,17 @@ export default function LoginView({ onNavigate, onLoginSuccess, lang }: LoginVie
                   type="text"
                   placeholder={lang === "fr" ? "Identifiant de téléphone WhatsApp" : "Registered WhatsApp Number"}
                   value={whatsapp}
-                  onChange={(e) => setWhatsapp(e.target.value)}
+                  onChange={(e) => {
+                    let val = e.target.value.replace(/[^\d+]/g, "");
+                    if (val.startsWith("+")) val = val.replace("+", "");
+                    if (val.startsWith("228")) {
+                      setWhatsapp("228" + val.substring(3));
+                    } else if (val === "" || val === "2" || val === "22") {
+                      setWhatsapp("228");
+                    } else {
+                      setWhatsapp("228" + val);
+                    }
+                  }}
                   className="w-full bg-transparent border-none py-2.5 px-1 text-sm outline-none text-white focus:ring-0 placeholder:text-slate-400 font-mono"
                   required
                 />
@@ -235,7 +257,17 @@ export default function LoginView({ onNavigate, onLoginSuccess, lang }: LoginVie
                   type="text"
                   placeholder={lang === "fr" ? "Votre numéro WhatsApp enregistré" : "Registered WhatsApp Number"}
                   value={forgotPhone}
-                  onChange={(e) => setForgotPhone(e.target.value)}
+                  onChange={(e) => {
+                    let val = e.target.value.replace(/[^\d+]/g, "");
+                    if (val.startsWith("+")) val = val.replace("+", "");
+                    if (val.startsWith("228")) {
+                      setForgotPhone("228" + val.substring(3));
+                    } else if (val === "" || val === "2" || val === "22") {
+                      setForgotPhone("228");
+                    } else {
+                      setForgotPhone("228" + val);
+                    }
+                  }}
                   className="w-full bg-transparent border-none py-2.5 px-1 text-sm outline-none text-white focus:ring-0 placeholder:text-slate-400 font-mono"
                   required
                 />

@@ -282,11 +282,20 @@ async function apiCall(endpoint: string, options?: RequestInit, simulatorCallbac
 
     return await res.json();
   } catch (error: any) {
-    // If API endpoint is missing, switch on dynamic self-healing fallback and process locally
+    const isStaticHost = typeof window !== "undefined" && (
+      window.location.hostname.includes("vercel.app") || 
+      window.location.hostname.includes("github.io") || 
+      window.location.hostname.includes("netlify.app") || 
+      window.location.hostname.includes("stackblitz") ||
+      window.location.hostname.includes("webcontainer")
+    );
+    // If API endpoint is missing and we are on static host, switch on dynamic self-healing fallback and process locally
     if (
-      error.message === "API_NOT_FOUND" || 
-      error.message.includes("Unexpected token") || 
-      error.name === "TypeError"
+      isStaticHost && (
+        error.message === "API_NOT_FOUND" || 
+        error.message.includes("Unexpected token") || 
+        error.name === "TypeError"
+      )
     ) {
       console.warn(`Redirecting routing of ${endpoint} to client browser LocalDatabase...`);
       useLocalFallback = true;

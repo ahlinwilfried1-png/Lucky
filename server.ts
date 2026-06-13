@@ -314,6 +314,87 @@ async function startServer() {
     saveDB(db);
   }
 
+  const syncFromSupabase = async () => {
+    try {
+      const supabaseDb = await loadStateFromSupabase();
+      if (supabaseDb) {
+        // Merge users: keep any users from local db that aren't in Supabase, and update existing ones from Supabase
+        const mergedUsers = [...supabaseDb.users];
+        for (const localUser of db.users) {
+          if (!mergedUsers.some(u => u.id === localUser.id)) {
+            mergedUsers.push(localUser);
+          }
+        }
+
+        // Merge deposits: keep local ones not in Supabase yet
+        const mergedDeposits = [...supabaseDb.deposits];
+        for (const localDep of db.deposits) {
+          if (!mergedDeposits.some(d => d.id === localDep.id)) {
+            mergedDeposits.push(localDep);
+          }
+        }
+
+        // Merge withdrawals
+        const mergedWithdrawals = [...supabaseDb.withdrawals];
+        for (const localWit of db.withdrawals) {
+          if (!mergedWithdrawals.some(w => w.id === localWit.id)) {
+            mergedWithdrawals.push(localWit);
+          }
+        }
+
+        // Merge tickets
+        const mergedTickets = [...supabaseDb.tickets];
+        for (const localTicket of db.tickets) {
+          if (!mergedTickets.some(t => t.id === localTicket.id)) {
+            mergedTickets.push(localTicket);
+          }
+        }
+
+        // Merge investments
+        const mergedInvestments = [...supabaseDb.investments];
+        for (const localInv of db.investments) {
+          if (!mergedInvestments.some(i => i.id === localInv.id)) {
+            mergedInvestments.push(localInv);
+          }
+        }
+
+        // Merge notifications
+        const mergedNotifications = [...supabaseDb.notifications];
+        for (const localNot of db.notifications) {
+          if (!mergedNotifications.some(n => n.id === localNot.id)) {
+            mergedNotifications.push(localNot);
+          }
+        }
+
+        // Merge bonus codes
+        const mergedBonusCodes = [...supabaseDb.bonusCodes];
+        for (const localBonus of db.bonusCodes) {
+          if (!mergedBonusCodes.some(b => b.code === localBonus.code)) {
+            mergedBonusCodes.push(localBonus);
+          }
+        }
+
+        // Assign merged state back
+        db = {
+          ...supabaseDb,
+          users: mergedUsers,
+          deposits: mergedDeposits,
+          withdrawals: mergedWithdrawals,
+          tickets: mergedTickets,
+          investments: mergedInvestments,
+          notifications: mergedNotifications,
+          bonusCodes: mergedBonusCodes
+        };
+
+        try {
+          fs.writeFileSync(DB_FILE, JSON.stringify(db, null, 2), "utf-8");
+        } catch (e) {}
+      }
+    } catch (e: any) {
+      console.warn("Soft warning: failed to pull dynamic state from Supabase during request:", e.message);
+    }
+  };
+
   const app = express();
 
   // Allow parsing bigger base-64 deposits uploads
@@ -388,7 +469,8 @@ async function startServer() {
   /* ==================== API ENDPOINTS ==================== */
 
   // 1. Live stats data endpoint
-  app.get("/api/platform-stats", (req, res) => {
+  app.get("/api/platform-stats", async (req, res) => {
+    await syncFromSupabase();
     // Return cumulative real metrics on db state plus live ticker simulation
     const totalDeposits = db.deposits.reduce((acc, d) => d.status === "approved" ? acc + d.amount : acc, 0) + 48430000;
     const totalWithdrawals = db.withdrawals.reduce((acc, w) => w.status === "approved" ? acc + w.amount : acc, 0) + 19280000;
@@ -430,7 +512,8 @@ async function startServer() {
   });
 
   // 2. Auth: Register
-  app.post("/api/auth/register", (req, res) => {
+  app.post("/api/auth/register", async (req, res) => {
+    await syncFromSupabase();
     const { name, whatsapp, country, password, sponsorCode } = req.body;
     const finalName = name ? name.trim() : (whatsapp ? `Investisseur ${whatsapp}` : "Investisseur");
 
@@ -519,7 +602,8 @@ async function startServer() {
   });
 
   // 3. Auth: Login
-  app.post("/api/auth/login", (req, res) => {
+  app.post("/api/auth/login", async (req, res) => {
+    await syncFromSupabase();
     const { whatsapp, password } = req.body;
 
     if (!whatsapp || !password) {
@@ -563,7 +647,8 @@ async function startServer() {
   });
 
   // 4. Update Password (Forgot Password simulation)
-  app.post("/api/auth/reset-password", (req, res) => {
+  app.post("/api/auth/reset-password", async (req, res) => {
+    await syncFromSupabase();
     const { whatsapp, newPassword } = req.body;
     if (!whatsapp || !newPassword) {
       return res.status(400).json({ error: "Veuillez fournir le numéro WhatsApp d'origine et le nouveau mot de passe." });
@@ -579,7 +664,8 @@ async function startServer() {
   });
 
   // 5. User Profile (including all aggregates and specific claims)
-  app.get("/api/user/profile/:userId", (req, res) => {
+  app.get("/api/user/profile/:userId", async (req, res) => {
+    await syncFromSupabase();
     const { userId } = req.params;
     processDailyEarnings(userId);
 
@@ -652,7 +738,8 @@ async function startServer() {
   });
 
   // 6. User Deposit system
-  app.post("/api/user/deposit", (req, res) => {
+  app.post("/api/user/deposit", async (req, res) => {
+    await syncFromSupabase();
     const { userId, amount, reference, provider, captureBase64, whatsapp } = req.body;
 
     if (!userId || !amount || !reference || !provider) {
@@ -703,7 +790,8 @@ async function startServer() {
   });
 
   // 7. User Withdrawal Request
-  app.post("/api/user/withdraw", (req, res) => {
+  app.post("/api/user/withdraw", async (req, res) => {
+    await syncFromSupabase();
     const { userId, amount, whatsapp, provider } = req.body;
 
     if (!userId || !amount || !whatsapp || !provider) {
@@ -770,7 +858,8 @@ async function startServer() {
   });
 
   // 8. Invest in Product
-  app.post("/api/user/buy-product", (req, res) => {
+  app.post("/api/user/buy-product", async (req, res) => {
+    await syncFromSupabase();
     const { userId, productId } = req.body;
 
     if (!userId || !productId) {
@@ -935,7 +1024,8 @@ async function startServer() {
   });
 
   // 9. Redeem Bonus Link / code
-  app.post("/api/user/redeem-bonus", (req, res) => {
+  app.post("/api/user/redeem-bonus", async (req, res) => {
+    await syncFromSupabase();
     const { userId, code } = req.body;
 
     if (!userId || !code) {
@@ -987,7 +1077,8 @@ async function startServer() {
   });
 
   // Daily Free claim bonus
-  app.post("/api/user/daily-reward", (req, res) => {
+  app.post("/api/user/daily-reward", async (req, res) => {
+    await syncFromSupabase();
     const { userId } = req.body;
     if (!userId) {
       return res.status(400).json({ error: "ID Utilisateur requis." });
@@ -1057,7 +1148,8 @@ async function startServer() {
   });
 
   // 11. Support Live Chat: Send Message
-  app.post("/api/chat/send", (req, res) => {
+  app.post("/api/chat/send", async (req, res) => {
+    await syncFromSupabase();
     const { userId, sender, message } = req.body;
     if (!userId || !sender || !message) {
       return res.status(400).json({ error: "Données requises manquantes." });
@@ -1100,7 +1192,8 @@ async function startServer() {
   });
 
   // Get Chat History
-  app.get("/api/chat/history/:userId", (req, res) => {
+  app.get("/api/chat/history/:userId", async (req, res) => {
+    await syncFromSupabase();
     const { userId } = req.params;
     const history = db.tickets.filter(t => t.userId === userId).sort((a,b) => new Date(a.date).getTime() - new Date(b.date).getTime());
     res.json({ history });
@@ -1110,7 +1203,8 @@ async function startServer() {
   /* ==================== ADMIN ENDPOINTS (SECURE) ==================== */
 
   // Admin: Get overall statistics
-  app.get("/api/admin/stats", (req, res) => {
+  app.get("/api/admin/stats", async (req, res) => {
+    await syncFromSupabase();
     // Total numbers of everything
     const totalUsers = db.users.filter(u => !u.isAdmin).length;
     const blockedUsers = db.users.filter(u => u.status === "blocked").length;
@@ -1139,7 +1233,8 @@ async function startServer() {
   });
 
   // Admin: Get Users
-  app.get("/api/admin/users", (req, res) => {
+  app.get("/api/admin/users", async (req, res) => {
+    await syncFromSupabase();
     // Return all users
     const userClients = db.users.filter(u => !u.isAdmin).map(u => {
       // Find investment aggregates for this user
@@ -1225,7 +1320,8 @@ async function startServer() {
   });
 
   // Admin: Manage Deposits (Approve or Reject)
-  app.get("/api/admin/deposits", (req, res) => {
+  app.get("/api/admin/deposits", async (req, res) => {
+    await syncFromSupabase();
     const sorted = db.deposits.map(d => {
       const user = db.users.find(u => u.id === d.userId);
       return {
@@ -1290,7 +1386,8 @@ async function startServer() {
   });
 
   // Admin: Manage Withdrawals (Approve or Reject)
-  app.get("/api/admin/withdrawals", (req, res) => {
+  app.get("/api/admin/withdrawals", async (req, res) => {
+    await syncFromSupabase();
     const sorted = db.withdrawals.map(w => {
       const user = db.users.find(u => u.id === w.userId);
       return {
@@ -1356,7 +1453,8 @@ async function startServer() {
   });
 
   // Admin: Get & Manage Product Plans
-  app.get("/api/admin/products", (req, res) => {
+  app.get("/api/admin/products", async (req, res) => {
+    await syncFromSupabase();
     res.json({ products: db.products });
   });
 
@@ -1489,12 +1587,14 @@ async function startServer() {
     res.json({ success: true, bonusCode: nBonus });
   });
 
-  app.get("/api/admin/bonus-codes", (req, res) => {
+  app.get("/api/admin/bonus-codes", async (req, res) => {
+    await syncFromSupabase();
     res.json({ bonusCodes: db.bonusCodes });
   });
 
   // Admin: Get all conversations
-  app.get("/api/admin/chats", (req, res) => {
+  app.get("/api/admin/chats", async (req, res) => {
+    await syncFromSupabase();
     // Collect all users and their last messages
     const chatStats = db.users.filter(u => !u.isAdmin).map(u => {
       const userMsgs = db.tickets.filter(t => t.userId === u.id);

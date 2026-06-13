@@ -172,8 +172,10 @@ export async function loadStateFromSupabase(): Promise<any> {
 
 // Bi-directional state pushes
 export async function saveStateToSupabase(state: any): Promise<boolean> {
+  let isAllSuccessful = true;
+
+  // 1. Users
   try {
-    // 1. Users
     if (state.users && state.users.length > 0) {
       const usersRows = state.users.map((u: any) => ({
         id: u.id,
@@ -194,10 +196,16 @@ export async function saveStateToSupabase(state: any): Promise<boolean> {
         is_admin: !!u.isAdmin,
         last_daily_checkin: u.lastDailyCheckin || null
       }));
-      await supabase.from("users").upsert(usersRows);
+      const { error } = await supabase.from("users").upsert(usersRows);
+      if (error) throw error;
     }
+  } catch (err: any) {
+    console.error("iAgri Supabase save warning (users):", err.message);
+    isAllSuccessful = false;
+  }
 
-    // 2. Products
+  // 2. Products
+  try {
     if (state.products && state.products.length > 0) {
       const productsRows = state.products.map((p: any) => ({
         id: p.id,
@@ -210,10 +218,16 @@ export async function saveStateToSupabase(state: any): Promise<boolean> {
         max_purchase_count: p.maxPurchaseCount,
         is_blocked: !!p.isBlocked
       }));
-      await supabase.from("products").upsert(productsRows);
+      const { error } = await supabase.from("products").upsert(productsRows);
+      if (error) throw error;
     }
+  } catch (err: any) {
+    console.error("iAgri Supabase save warning (products):", err.message);
+    isAllSuccessful = false;
+  }
 
-    // 3. Investments
+  // 3. Investments
+  try {
     if (state.investments && state.investments.length > 0) {
       const investmentsRows = state.investments.map((inv: any) => ({
         id: inv.id,
@@ -229,10 +243,16 @@ export async function saveStateToSupabase(state: any): Promise<boolean> {
         last_claim_date: inv.lastClaimDate,
         duration_days: inv.durationDays || 10
       }));
-      await supabase.from("investments").upsert(investmentsRows);
+      const { error } = await supabase.from("investments").upsert(investmentsRows);
+      if (error) throw error;
     }
+  } catch (err: any) {
+    console.error("iAgri Supabase save warning (investments):", err.message);
+    isAllSuccessful = false;
+  }
 
-    // 4. Deposits
+  // 4. Deposits
+  try {
     if (state.deposits && state.deposits.length > 0) {
       const depositsRows = state.deposits.map((d: any) => ({
         id: d.id,
@@ -245,10 +265,16 @@ export async function saveStateToSupabase(state: any): Promise<boolean> {
         status: d.status,
         date: d.date
       }));
-      await supabase.from("deposits").upsert(depositsRows);
+      const { error } = await supabase.from("deposits").upsert(depositsRows);
+      if (error) throw error;
     }
+  } catch (err: any) {
+    console.error("iAgri Supabase save warning (deposits):", err.message);
+    isAllSuccessful = false;
+  }
 
-    // 5. Withdrawals
+  // 5. Withdrawals
+  try {
     if (state.withdrawals && state.withdrawals.length > 0) {
       const withdrawalsRows = state.withdrawals.map((w: any) => ({
         id: w.id,
@@ -259,10 +285,16 @@ export async function saveStateToSupabase(state: any): Promise<boolean> {
         status: w.status,
         date: w.date
       }));
-      await supabase.from("withdrawals").upsert(withdrawalsRows);
+      const { error } = await supabase.from("withdrawals").upsert(withdrawalsRows);
+      if (error) throw error;
     }
+  } catch (err: any) {
+    console.error("iAgri Supabase save warning (withdrawals):", err.message);
+    isAllSuccessful = false;
+  }
 
-    // 6. Referral commissions
+  // 6. Referral commissions
+  try {
     if (state.referralCommissions && state.referralCommissions.length > 0) {
       const commRows = state.referralCommissions.map((c: any) => ({
         id: c.id,
@@ -272,10 +304,16 @@ export async function saveStateToSupabase(state: any): Promise<boolean> {
         level: c.level,
         date: c.date
       }));
-      await supabase.from("referral_commissions").upsert(commRows);
+      const { error } = await supabase.from("referral_commissions").upsert(commRows);
+      if (error) throw error;
     }
+  } catch (err: any) {
+    console.error("iAgri Supabase save warning (referralCommissions):", err.message);
+    isAllSuccessful = false;
+  }
 
-    // 7. Support tickets
+  // 7. Support tickets
+  try {
     if (state.tickets && state.tickets.length > 0) {
       const ticketsRows = state.tickets.map((t: any) => ({
         id: t.id,
@@ -284,10 +322,16 @@ export async function saveStateToSupabase(state: any): Promise<boolean> {
         message: t.message,
         date: t.date
       }));
-      await supabase.from("tickets").upsert(ticketsRows);
+      const { error } = await supabase.from("tickets").upsert(ticketsRows);
+      if (error) throw error;
     }
+  } catch (err: any) {
+    console.error("iAgri Supabase save warning (tickets):", err.message);
+    isAllSuccessful = false;
+  }
 
-    // 8. Notifications
+  // 8. Notifications
+  try {
     if (state.notifications && state.notifications.length > 0) {
       const notRows = state.notifications.map((n: any) => ({
         id: n.id,
@@ -297,10 +341,16 @@ export async function saveStateToSupabase(state: any): Promise<boolean> {
         date: n.date,
         read_by: n.readBy || []
       }));
-      await supabase.from("notifications").upsert(notRows);
+      const { error } = await supabase.from("notifications").upsert(notRows);
+      if (error) throw error;
     }
+  } catch (err: any) {
+    console.error("iAgri Supabase save warning (notifications):", err.message);
+    isAllSuccessful = false;
+  }
 
-    // 9. Bonus Codes
+  // 9. Bonus Codes
+  try {
     if (state.bonusCodes && state.bonusCodes.length > 0) {
       const bonusRows = state.bonusCodes.map((b: any) => ({
         code: b.code,
@@ -309,23 +359,30 @@ export async function saveStateToSupabase(state: any): Promise<boolean> {
         created_by: b.created_by,
         usage_limit: b.usageLimit || 100
       }));
-      await supabase.from("bonus_codes").upsert(bonusRows);
+      const { error } = await supabase.from("bonus_codes").upsert(bonusRows);
+      if (error) throw error;
     }
+  } catch (err: any) {
+    console.error("iAgri Supabase save warning (bonusCodes):", err.message);
+    isAllSuccessful = false;
+  }
 
-    // 10. Settings
+  // 10. Settings
+  try {
     if (state.settings) {
-      await supabase.from("settings").upsert({
+      const { error } = await supabase.from("settings").upsert({
         id: "primary",
         whatsapp_group_link: state.settings.whatsappGroupLink,
         telegram_channel_link: state.settings.telegramChannelLink
       });
+      if (error) throw error;
     }
-
-    return true;
   } catch (err: any) {
-    console.error("iAgri Supabase save warning:", err.message);
-    return false;
+    console.error("iAgri Supabase save warning (settings):", err.message);
+    isAllSuccessful = false;
   }
+
+  return isAllSuccessful;
 }
 
 // Singular table Delete proxies (re-sync cleanups)

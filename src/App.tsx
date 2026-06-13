@@ -39,7 +39,7 @@ export default function App() {
     }
 
     try {
-      const storedUser = localStorage.getItem("investa_user_session");
+      const storedUser = sessionStorage.getItem("investa_user_session");
       if (storedUser) {
         const parsed = JSON.parse(storedUser);
         setUser(parsed);
@@ -61,11 +61,11 @@ export default function App() {
 
   const handleLoginSuccess = (userData: { id: string; name: string; whatsapp: string; country: string; isAdmin: boolean }) => {
     setUser(userData);
-    localStorage.setItem("investa_user_session", JSON.stringify(userData));
+    sessionStorage.setItem("investa_user_session", JSON.stringify(userData));
   };
 
   const handleLogout = () => {
-    localStorage.removeItem("investa_user_session");
+    sessionStorage.removeItem("investa_user_session");
     setUser(null);
     setCurrentView("register");
   };
