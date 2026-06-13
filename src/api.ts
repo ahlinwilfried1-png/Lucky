@@ -811,7 +811,17 @@ export async function claimDailyGift(userId: string) {
 export async function fetchUserNotifications(userId: string) {
   return apiCall(`/api/user/notifications/${userId}`, undefined, () => {
     const db = getLocalDB();
-    return db.notifications.filter((n: any) => n.userId === "all" || n.userId === userId);
+    const list = db.notifications.filter((n: any) => n.userId === "all" || n.userId === userId);
+    const unreadCount = list.filter((n: any) => !n.readBy.includes(userId)).length;
+    const sortedNotifications = list.map((n: any) => ({
+      ...n,
+      read: n.readBy.includes(userId)
+    })).sort((a: any, b: any) => new Date(b.date).getTime() - new Date(a.date).getTime());
+
+    return {
+      unreadCount,
+      notifications: sortedNotifications
+    };
   });
 }
 
@@ -856,7 +866,10 @@ export async function sendChatMessage(userId: string, sender: string, message: s
 export async function fetchChatHistory(userId: string) {
   return apiCall(`/api/chat/history/${userId}`, undefined, () => {
     const db = getLocalDB();
-    return db.tickets.filter((t: any) => t.userId === userId);
+    const history = db.tickets
+      .filter((t: any) => t.userId === userId)
+      .sort((a: any, b: any) => new Date(a.date).getTime() - new Date(b.date).getTime());
+    return { history };
   });
 }
 
