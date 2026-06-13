@@ -128,6 +128,7 @@ export default function AdminView({ adminUserId, onExit, lang }: AdminViewProps)
   const [newProdReturn, setNewProdReturn] = useState("");
   const [newProdDuration, setNewProdDuration] = useState("10");
   const [newProdBadge, setNewProdBadge] = useState("");
+  const [newProdMaxPurchases, setNewProdMaxPurchases] = useState("3");
 
   // Edit Product States
   const [editingProductId, setEditingProductId] = useState<string | null>(null);
@@ -136,6 +137,7 @@ export default function AdminView({ adminUserId, onExit, lang }: AdminViewProps)
   const [editProdReturn, setEditProdReturn] = useState("");
   const [editProdDuration, setEditProdDuration] = useState("");
   const [editProdBadge, setEditProdBadge] = useState("");
+  const [editProdMaxPurchases, setEditProdMaxPurchases] = useState("");
 
   // Create Global Announcement Form States
   const [globalNotifTitle, setGlobalNotifTitle] = useState("");
@@ -455,7 +457,8 @@ export default function AdminView({ adminUserId, onExit, lang }: AdminViewProps)
         price: newProdPrice,
         dailyReturn: newProdReturn,
         durationDays: newProdDuration,
-        badge: newProdBadge || undefined
+        badge: newProdBadge || undefined,
+        maxPurchaseCount: newProdMaxPurchases ? parseInt(newProdMaxPurchases) : undefined
       });
 
       if (res.success) {
@@ -464,6 +467,7 @@ export default function AdminView({ adminUserId, onExit, lang }: AdminViewProps)
         setNewProdPrice("");
         setNewProdReturn("");
         setNewProdBadge("");
+        setNewProdMaxPurchases("3");
         reloadProducts();
       }
     } catch (err: any) {
@@ -505,12 +509,14 @@ export default function AdminView({ adminUserId, onExit, lang }: AdminViewProps)
         price: editProdPrice,
         dailyReturn: editProdReturn,
         durationDays: editProdDuration,
-        badge: editProdBadge || undefined
+        badge: editProdBadge || undefined,
+        maxPurchaseCount: editProdMaxPurchases ? parseInt(editProdMaxPurchases) : undefined
       });
 
       if (res.success) {
         setNotifyMsg("Produit mis à jour avec succès !");
         setEditingProductId(null);
+        setEditProdMaxPurchases("");
         reloadProducts();
       } else if (res.error) {
         setNotifyErr(res.error);
@@ -1202,7 +1208,7 @@ export default function AdminView({ adminUserId, onExit, lang }: AdminViewProps)
             <div className="bg-white/5 border border-white/5 rounded-2xl p-5">
               <h3 className="text-xs font-bold font-mono text-white mb-4 uppercase">Ajouter un nouveau Plan d'Investissement VIP</h3>
               
-              <form onSubmit={handleCreateProductSubmit} className="grid sm:grid-cols-5 gap-4 items-end">
+              <form onSubmit={handleCreateProductSubmit} className="grid sm:grid-cols-6 gap-4 items-end">
                 <div>
                   <label className="block text-[10px] font-mono text-gray-400 mb-1">Nom du Plan VIP</label>
                   <input
@@ -1247,6 +1253,18 @@ export default function AdminView({ adminUserId, onExit, lang }: AdminViewProps)
                     value={newProdBadge}
                     onChange={(e) => setNewProdBadge(e.target.value)}
                     className="w-full bg-[#03061A] border border-white/10 rounded-xl py-2 px-3 text-xs focus:border-red-400 outline-none font-mono"
+                  />
+                </div>
+
+                <div>
+                  <label className="block text-[10px] font-mono text-gray-400 mb-1">Achats Max / Utilisateur</label>
+                  <input
+                    type="number"
+                    placeholder="Ex: 3"
+                    value={newProdMaxPurchases}
+                    onChange={(e) => setNewProdMaxPurchases(e.target.value)}
+                    className="w-full bg-[#03061A] border border-white/10 rounded-xl py-2 px-3 text-xs focus:border-red-400 outline-none font-mono"
+                    required
                   />
                 </div>
 
@@ -1320,6 +1338,16 @@ export default function AdminView({ adminUserId, onExit, lang }: AdminViewProps)
                           />
                         </div>
                       </div>
+                      <div>
+                        <label className="block text-[10px] text-gray-400 mb-1">Achats Max / Utilisateur :</label>
+                        <input
+                          type="number"
+                          value={editProdMaxPurchases}
+                          onChange={(e) => setEditProdMaxPurchases(e.target.value)}
+                          className="w-full bg-[#03061A] border border-white/10 rounded-xl py-1.5 px-3 text-xs focus:border-red-400 outline-none"
+                          required
+                        />
+                      </div>
                       <div className="flex gap-2 pt-2 text-xs">
                         <button
                           type="submit"
@@ -1361,6 +1389,10 @@ export default function AdminView({ adminUserId, onExit, lang }: AdminViewProps)
                             <span>Durée plan :</span>
                             <span>{prod.durationDays} Jours</span>
                           </div>
+                          <div className="flex justify-between text-[11px] text-[#A78BFA] border-t border-white/5 pt-1.5 mt-1.5">
+                            <span>Achats Max / util :</span>
+                            <span className="font-bold">{prod.maxPurchaseCount !== undefined ? prod.maxPurchaseCount : "Non-défini"}</span>
+                          </div>
                         </div>
                       </div>
 
@@ -1379,6 +1411,7 @@ export default function AdminView({ adminUserId, onExit, lang }: AdminViewProps)
                               setEditProdReturn(prod.dailyReturn.toString());
                               setEditProdDuration(prod.durationDays.toString());
                               setEditProdBadge(prod.badge || "");
+                              setEditProdMaxPurchases(prod.maxPurchaseCount !== undefined ? prod.maxPurchaseCount.toString() : "3");
                             }}
                             className="p-2 rounded-lg bg-yellow-500/10 hover:bg-yellow-500 text-yellow-400 hover:text-black border border-yellow-500/15 transition"
                             title="Modifier ce produit"

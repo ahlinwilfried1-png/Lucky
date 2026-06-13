@@ -21,7 +21,9 @@ import {
   ShieldAlert,
   Megaphone,
   Sprout,
-  Headphones
+  Headphones,
+  Download,
+  Info
 } from "lucide-react";
 import { 
   fetchUserProfile, 
@@ -1045,6 +1047,56 @@ export default function DashboardView({ userId, onLogout, lang, onNavigate }: Da
                 )}
               </div>
             )}
+
+            {/* À propos de nous panel */}
+            {activeSubView === "aboutus" && (
+              <div className="bg-[#0A0E17]/90 border border-white/5 rounded-3xl p-6 space-y-6 font-sans text-white">
+                <div className="flex items-center gap-2 border-b border-white/5 pb-3">
+                  <Info className="w-5 h-5 text-white" />
+                  <h2 className="text-sm font-bold uppercase font-mono tracking-wider text-white">À Propos de nous</h2>
+                </div>
+
+                <div className="space-y-4 text-xs leading-relaxed">
+                  <div className="p-4 rounded-2xl bg-gradient-to-r from-white/5 to-white/5 border border-white/10">
+                    <h3 className="font-bold text-white font-mono text-xs uppercase mb-2">Notre Vision & Mission</h3>
+                    <p className="text-white">
+                      Nous sommes une plateforme innovante d'investissement agro-écologique engagée à connecter les investisseurs avec l'agriculture durable en Afrique. Notre mission est de démocratiser le financement agricole tout en garantissant des rendements quotidiens stables et sécurisés pour nos membres.
+                    </p>
+                  </div>
+
+                  <div className="space-y-3">
+                    <h3 className="font-bold text-white font-mono text-xs uppercase">Pourquoi nous faire confiance ?</h3>
+                    
+                    <div className="grid gap-3 sm:grid-cols-2">
+                      <div className="bg-[#091032] p-3.5 rounded-xl border border-white/5">
+                        <span className="font-extrabold text-white block mb-1">🌱 Projets Réels</span>
+                        <p className="text-[11px] text-white">Chaque FCFA investi est injecté dans des cultures biologiques concrètes : soja bio, riziculture de pointe et élevages durables.</p>
+                      </div>
+
+                      <div className="bg-[#091032] p-3.5 rounded-xl border border-white/5">
+                        <span className="font-extrabold text-white block mb-1">🔒 Sécurité absolue</span>
+                        <p className="text-[11px] text-white">Vos fonds sont protégés par nos réserves d'assurance de récolte et les retraits de gains par Mobile Money sont traités instantanément.</p>
+                      </div>
+
+                      <div className="bg-[#091032] p-3.5 rounded-xl border border-white/5">
+                        <span className="font-extrabold text-white block mb-1">📈 Rendement Garanti</span>
+                        <p className="text-[11px] text-white">Grâce à des cycles de production optimisés, nous vous offrons des retours sur investissement clairs, traçables et performants.</p>
+                      </div>
+
+                      <div className="bg-[#091032] p-3.5 rounded-xl border border-white/5">
+                        <span className="font-extrabold text-white block mb-1">🌍 Impact Positif</span>
+                        <p className="text-[11px] text-white">En investissant avec nous, vous soutenez les agriculteurs locaux africains et participez activement à l'indépendance alimentaire.</p>
+                      </div>
+                    </div>
+                  </div>
+
+                  <div className="p-4 rounded-xl bg-white/5 border border-white/5 text-[11px] text-white font-mono text-center">
+                    <span className="block font-bold text-white mb-1">Besoin d'aide ou d'informations supplémentaires ?</span>
+                    Rejoignez notre réseau officiel ou discutez en direct avec un conseiller disponible 24h/24 & 7j/7 depuis l'onglet Support.
+                  </div>
+                </div>
+              </div>
+            )}
           </div>
         ) : (
           <div>
@@ -1105,85 +1157,10 @@ export default function DashboardView({ userId, onLogout, lang, onNavigate }: Da
                   </div>
                 </div>
 
-                {/* Testimonials slideshow with va-et-vient effect */}
-                <div className="bg-[#0A122C]/90 border border-[#0066FF]/20 rounded-3xl p-5 text-white relative overflow-hidden shadow-lg">
-                  <div className="absolute top-0 right-0 w-24 h-24 bg-blue-500/5 rounded-full blur-2xl pointer-events-none"></div>
 
-                  <div className="flex justify-between items-center pb-3 mb-3 border-b border-white/5">
-                    <div className="flex items-center gap-2 animate-pulse">
-                      <span className="w-2.5 h-2.5 rounded-full bg-amber-500"></span>
-                      <h4 className="text-[11px] font-extrabold uppercase tracking-widest font-mono text-[#D4AF37]">Témoignages Réels • Va-et-Vient</h4>
-                    </div>
-                    {/* Direction indicator */}
-                    <div className="flex items-center gap-1.5 font-mono text-[9px] text-slate-400 bg-white/5 px-2.5 py-1 rounded-full border border-white/5">
-                      <span className={`w-1.5 h-1.5 rounded-full bg-amber-500 ${testiDir === -1 ? 'animate-ping' : ''}`}></span>
-                      <span>{testiDir === 1 ? "➡️ Retour Droite" : "⬅️ Retour Gauche"}</span>
-                    </div>
-                  </div>
 
-                  {/* Slider container with beautiful cross-fade style */}
-                  <div className="relative min-h-[145px] flex flex-col justify-between">
-                    {/* Testimonial Active Slide */}
-                    <div 
-                      key={testiIndex} 
-                      className="animate-fade-in transition-all duration-300"
-                    >
-                      <div className="flex items-center justify-between gap-2.5 mb-2.5">
-                        <div className="flex items-center gap-2.5">
-                          <div className="w-9 h-9 rounded-full bg-gradient-to-tr from-[#0066FF] to-[#00A3FF] flex items-center justify-center font-bold text-white text-xs border border-white/10 shadow-sm uppercase font-mono">
-                            {testimonialsList[testiIndex].avatar}
-                          </div>
-                          <div>
-                            <div className="flex items-center gap-1.5">
-                              <span className="font-extrabold text-slate-100 text-[12px]">{testimonialsList[testiIndex].name}</span>
-                              <span className="text-[9px] text-emerald-400 font-bold bg-emerald-500/10 px-1.5 py-0.5 rounded border border-emerald-500/20 font-mono">Investisseur ✓</span>
-                            </div>
-                            <div className="flex items-center gap-2 text-[9px] text-slate-400 font-mono">
-                              <span>{testimonialsList[testiIndex].phone}</span>
-                              <span>•</span>
-                              <span>{testimonialsList[testiIndex].country}</span>
-                            </div>
-                          </div>
-                        </div>
 
-                        <div className="flex gap-0.5 text-amber-400">
-                          {Array.from({ length: testimonialsList[testiIndex].stars }).map((_, i) => (
-                            <span key={i} className="text-xs">★</span>
-                          ))}
-                        </div>
-                      </div>
 
-                      {/* Text */}
-                      <p className="text-[12.5px] text-slate-200 italic leading-relaxed font-sans font-light bg-white/5 p-3 rounded-2xl border border-white/5">
-                        « {testimonialsList[testiIndex].text} »
-                      </p>
-                    </div>
-
-                    {/* Progress Dots / Navigation dots */}
-                    <div className="flex justify-between items-center mt-3.5 pt-3 border-t border-white/5">
-                      <div className="flex gap-1.5">
-                        {testimonialsList.map((_, idx) => (
-                          <button
-                            key={idx}
-                            onClick={() => {
-                              setTestiIndex(idx);
-                              setTestiDir(idx === testimonialsList.length - 1 ? -1 : idx === 0 ? 1 : testiDir);
-                            }}
-                            className={`h-1.5 rounded-full transition-all duration-300 cursor-pointer ${
-                              idx === testiIndex 
-                                ? "w-6 bg-gradient-to-r from-amber-400 to-[#D4AF37]" 
-                                : "w-1.5 bg-slate-600 hover:bg-slate-400"
-                            }`}
-                          />
-                        ))}
-                      </div>
-
-                      <span className="text-[10px] font-mono font-bold text-amber-400/90 bg-amber-500/10 border border-amber-500/25 px-2 py-0.5 rounded-md tracking-wider">
-                        Revenu reçu: {testimonialsList[testiIndex].amount}
-                      </span>
-                    </div>
-                  </div>
-                </div>
 
                 {/* Sub-menu lists shortcut buttons - highly visible history, support, pointage, promo code, and infos */}
                 <div className="grid grid-cols-2 xs:grid-cols-3 sm:grid-cols-5 gap-3 font-semibold text-xs text-center">
@@ -1381,7 +1358,22 @@ export default function DashboardView({ userId, onLogout, lang, onNavigate }: Da
                           )}
 
                           <div className="space-y-1.5">
-                            <h3 className="text-sm font-extrabold text-white uppercase tracking-wide">{prod.name}</h3>
+                            <div className="flex justify-between items-start gap-2">
+                              <h3 className="text-sm font-extrabold text-white uppercase tracking-wide">{prod.name}</h3>
+                              {(() => {
+                                const maxAllowed = prod.maxPurchaseCount !== undefined ? prod.maxPurchaseCount : 3;
+                                const activePurchases = investments.filter(inv => inv.planId === prod.id).length;
+                                return (
+                                  <span className={`text-[9px] font-mono font-bold px-2 py-0.5 rounded shrink-0 ${
+                                    activePurchases >= maxAllowed 
+                                      ? "bg-rose-500/10 text-rose-400 border border-rose-500/10" 
+                                      : "bg-emerald-500/10 text-emerald-400 border border-emerald-500/10"
+                                  }`}>
+                                    Achat: {activePurchases}/{maxAllowed}
+                                  </span>
+                                );
+                              })()}
+                            </div>
                             <div className="flex items-center gap-1.5">
                               <span className="text-xl font-bold font-mono tracking-tight text-[#D4AF37]">{prod.price.toLocaleString()} FCFA</span>
                               <span className="text-[10px] text-slate-400 font-mono font-light">prix fixe de location</span>
@@ -1408,12 +1400,25 @@ export default function DashboardView({ userId, onLogout, lang, onNavigate }: Da
                               <Zap className="w-3.5 h-3.5 fill-[#D4AF37]" /> Rendement garanti 100%
                             </span>
 
-                            <button
-                              onClick={() => handleBuyProduct(prod)}
-                              className="px-5 py-2.5 rounded-xl bg-[#D4AF37] hover:bg-[#B8962F] text-black text-xs font-bold font-mono tracking-wider transition shadow-lg shadow-[#D4AF37]/10 active:scale-95 cursor-pointer"
-                            >
-                              Activer le Plan ⚡
-                            </button>
+                            {(() => {
+                              const maxAllowed = prod.maxPurchaseCount !== undefined ? prod.maxPurchaseCount : 3;
+                              const activePurchases = investments.filter(inv => inv.planId === prod.id).length;
+                              const limitReached = activePurchases >= maxAllowed;
+                              
+                              return (
+                                <button
+                                  onClick={() => !limitReached && handleBuyProduct(prod)}
+                                  disabled={limitReached}
+                                  className={`px-5 py-2.5 rounded-xl text-xs font-bold font-mono tracking-wider transition shadow-lg cursor-pointer ${
+                                    limitReached 
+                                      ? "bg-slate-800 text-slate-500 border border-slate-700 shadow-none cursor-not-allowed opacity-50" 
+                                      : "bg-[#D4AF37] hover:bg-[#B8962F] text-black shadow-[#D4AF37]/10 active:scale-95"
+                                  }`}
+                                >
+                                  {limitReached ? "Limite atteinte 🔒" : "Activer le Plan ⚡"}
+                                </button>
+                              );
+                            })()}
                           </div>
                         </div>
                       );
@@ -1614,7 +1619,7 @@ export default function DashboardView({ userId, onLogout, lang, onNavigate }: Da
 
                   <button 
                     onClick={() => setActiveSubView("notifications")}
-                    className="w-full px-5 py-4 flex items-center justify-between text-left hover:bg-white/5 transition"
+                    className="w-full px-5 py-4 flex items-center justify-between text-left hover:bg-white/5 transition border-b border-white/5"
                   >
                     <div className="flex items-center gap-3">
                       <Bell className="w-4 h-4 text-[#FBBF24]" />
@@ -1622,6 +1627,34 @@ export default function DashboardView({ userId, onLogout, lang, onNavigate }: Da
                     </div>
                     <ChevronRight className="w-4 h-4 text-gray-500" />
                   </button>
+
+                  <button 
+                    onClick={() => setActiveSubView("aboutus")}
+                    className="w-full px-5 py-4 flex items-center justify-between text-left hover:bg-white/5 transition border-b border-white/5"
+                  >
+                    <div className="flex items-center gap-3">
+                      <Info className="w-4 h-4 text-amber-500" />
+                      <span>À propos de nous (iAgri)</span>
+                    </div>
+                    <ChevronRight className="w-4 h-4 text-gray-500" />
+                  </button>
+
+                  <a 
+                    href="/application-momo.apk" 
+                    download="application-momo.apk"
+                    className="w-full px-5 py-5 flex items-center justify-between text-left bg-gradient-to-r from-emerald-500/10 to-teal-500/10 hover:from-emerald-500/20 hover:to-teal-500/20 transition group text-emerald-400 font-bold"
+                  >
+                    <div className="flex items-center gap-3">
+                      <div className="w-8 h-8 rounded-xl bg-emerald-500/15 flex items-center justify-center text-emerald-400 group-hover:scale-110 transition">
+                        <Download className="w-4 h-4" />
+                      </div>
+                      <div className="flex flex-col font-sans">
+                        <span className="text-xs font-black text-white">Télécharger l'Application mobile (.APK)</span>
+                        <span className="text-[9px] text-[#02A3FC] font-mono font-normal block mt-0.5">Accès instantané sécurisé MoMo Pay 📲</span>
+                      </div>
+                    </div>
+                    <ChevronRight className="w-4 h-4 text-emerald-400" />
+                  </a>
                 </div>
 
                 {/* Simulated quick developer balance multiplier in mock preview environments if needed */}

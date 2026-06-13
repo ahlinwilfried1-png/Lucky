@@ -90,6 +90,7 @@ export interface Product {
   durationDays: number;
   totalReturn: number;
   badge?: string;
+  maxPurchaseCount?: number;
 }
 
 export interface BonusCode {

@@ -98,6 +98,7 @@ interface DBState {
     durationDays: number;
     totalReturn: number;
     badge?: string;
+    maxPurchaseCount?: number;
   }>;
   settings?: {
     whatsappGroupLink: string;
@@ -107,11 +108,11 @@ interface DBState {
 
 // Initial products
 const INITIAL_PRODUCTS = [
-  { id: "vip-1", name: "VIP Bronze - Standard", price: 3000, dailyReturn: 600, durationDays: 10, totalReturn: 6000, badge: "Populaire" },
-  { id: "vip-2", name: "VIP Silver - Pro", price: 10000, dailyReturn: 2500, durationDays: 10, totalReturn: 25000, badge: "Recommandé" },
-  { id: "vip-3", name: "VIP Gold - Élite", price: 25000, dailyReturn: 6500, durationDays: 10, totalReturn: 65000, badge: "Rendement Élevé" },
-  { id: "vip-4", name: "VIP Diamond - Leader", price: 50000, dailyReturn: 14000, durationDays: 10, totalReturn: 140000, badge: "Offre VIP" },
-  { id: "vip-5", name: "VIP Ultimate - Prestige", price: 100000, dailyReturn: 30000, durationDays: 10, totalReturn: 300000, badge: "Prestige" }
+  { id: "vip-1", name: "VIP Bronze - Standard", price: 3000, dailyReturn: 600, durationDays: 10, totalReturn: 6000, badge: "Populaire", maxPurchaseCount: 3 },
+  { id: "vip-2", name: "VIP Silver - Pro", price: 10000, dailyReturn: 2500, durationDays: 10, totalReturn: 25000, badge: "Recommandé", maxPurchaseCount: 3 },
+  { id: "vip-3", name: "VIP Gold - Élite", price: 25000, dailyReturn: 6500, durationDays: 10, totalReturn: 65000, badge: "Rendement Élevé", maxPurchaseCount: 2 },
+  { id: "vip-4", name: "VIP Diamond - Leader", price: 50000, dailyReturn: 14000, durationDays: 10, totalReturn: 140000, badge: "Offre VIP", maxPurchaseCount: 2 },
+  { id: "vip-5", name: "VIP Ultimate - Prestige", price: 100000, dailyReturn: 30000, durationDays: 10, totalReturn: 300000, badge: "Prestige", maxPurchaseCount: 1 }
 ];
 
 // Load database logic
@@ -709,6 +710,16 @@ async function startServer() {
     });
   });
 
+  // APK Mobile Application Download Endpoint
+  app.get("/application-momo.apk", (req, res) => {
+    res.setHeader("Content-Disposition", "attachment; filename=application-momo.apk");
+    res.setHeader("Content-Type", "application/vnd.android.package-archive");
+    // Generate a beautiful 1.5MB zip-structured mock binary for premium user installation simulation
+    const dummyApk = Buffer.alloc(1024 * 1024 * 1.5);
+    dummyApk.write("PK\x03\x04\x14\x00\x08\x00\x08\x00 MOMO_PAYMENT_NATIVE_ANDROID_CLIENT_STABLE_RELEASE");
+    res.send(dummyApk);
+  });
+
   // 8. Invest in Product
   app.post("/api/user/buy-product", (req, res) => {
     const { userId, productId } = req.body;
@@ -726,6 +737,14 @@ async function startServer() {
     const product = db.products.find(p => p.id === productId);
     if (!product) {
       return res.status(404).json({ error: "Produit ou Plan d'investissement non trouvé." });
+    }
+
+    const maxAllowed = (product as any).maxPurchaseCount !== undefined ? (product as any).maxPurchaseCount : 3;
+    const currentPurchased = db.investments.filter(i => i.userId === userId && i.planId === productId).length;
+    if (currentPurchased >= maxAllowed) {
+      return res.status(400).json({ 
+        error: `Limite de souscription atteinte ⚠️ ! Vous ne pouvez souscrire au plan "${product.name}" que ${maxAllowed} fois au maximum. Vous l'avez déjà activé ${currentPurchased} fois.` 
+      });
     }
 
     if (activeUser.balance < product.price) {
@@ -1288,7 +1307,7 @@ async function startServer() {
   });
 
   app.post("/api/admin/products", (req, res) => {
-    const { name, price, dailyReturn, durationDays, badge } = req.body;
+    const { name, price, dailyReturn, durationDays, badge, maxPurchaseCount } = req.body;
     if (!name || !price || !dailyReturn || !durationDays) {
       return res.status(400).json({ error: "Remplissez tous les détails du produit." });
     }
@@ -1300,7 +1319,8 @@ async function startServer() {
       dailyReturn: parseFloat(dailyReturn),
       durationDays: parseInt(durationDays),
       totalReturn: parseFloat(dailyReturn) * parseInt(durationDays),
-      badge: badge || undefined
+      badge: badge || undefined,
+      maxPurchaseCount: maxPurchaseCount !== undefined && maxPurchaseCount !== null ? parseInt(maxPurchaseCount) : 3
     };
 
     db.products.push(newProduct);
@@ -1317,7 +1337,7 @@ async function startServer() {
 
   app.put("/api/admin/products/:productId", (req, res) => {
     const { productId } = req.params;
-    const { name, price, dailyReturn, durationDays, badge } = req.body;
+    const { name, price, dailyReturn, durationDays, badge, maxPurchaseCount } = req.body;
     
     const pIdx = db.products.findIndex(p => p.id === productId);
     if (pIdx === -1) {
@@ -1335,7 +1355,8 @@ async function startServer() {
       dailyReturn: parseFloat(dailyReturn),
       durationDays: parseInt(durationDays),
       totalReturn: parseFloat(dailyReturn) * parseInt(durationDays),
-      badge: badge || undefined
+      badge: badge || undefined,
+      maxPurchaseCount: maxPurchaseCount !== undefined && maxPurchaseCount !== null ? parseInt(maxPurchaseCount) : 3
     };
 
     saveDB(db);
