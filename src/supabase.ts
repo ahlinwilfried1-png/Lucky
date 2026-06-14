@@ -116,7 +116,8 @@ export async function loadStateFromSupabase(): Promise<any> {
       amount: Number(w.amount || 0),
       provider: w.provider,
       status: w.status || "pending",
-      date: w.date
+      date: w.date,
+      paymentProof: w.payment_proof || ""
     }));
 
     const referralCommissions = (cRes.data || []).map((c: any) => ({
@@ -314,7 +315,8 @@ export async function saveStateToSupabase(state: any): Promise<boolean> {
         amount: w.amount,
         provider: w.provider,
         status: w.status,
-        date: w.date
+        date: w.date,
+        payment_proof: w.paymentProof || null
       }));
       const ok = await upsertWithFallback("withdrawals", withdrawalsRows, "id");
       if (!ok) isAllSuccessful = false;

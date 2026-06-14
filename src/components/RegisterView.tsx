@@ -15,7 +15,7 @@ const countryList = [
 ];
 
 export default function RegisterView({ onNavigate, lang }: RegisterViewProps) {
-  const [whatsapp, setWhatsapp] = useState("228");
+  const [whatsapp, setWhatsapp] = useState("");
   const [country, setCountry] = useState("Togo");
   const [password, setPassword] = useState("");
   const [confirmPassword, setConfirmPassword] = useState("");
@@ -203,15 +203,8 @@ export default function RegisterView({ onNavigate, lang }: RegisterViewProps) {
                 placeholder={lang === "fr" ? "Numéro de téléphone *" : "Phone number *"}
                 value={whatsapp}
                 onChange={(e) => {
-                  let val = e.target.value.replace(/[^\d+]/g, "");
-                  if (val.startsWith("+")) val = val.replace("+", "");
-                  if (val.startsWith("228")) {
-                    setWhatsapp("228" + val.substring(3));
-                  } else if (val === "" || val === "2" || val === "22") {
-                    setWhatsapp("228");
-                  } else {
-                    setWhatsapp("228" + val);
-                  }
+                  const val = e.target.value.replace(/\D/g, "");
+                  setWhatsapp(val);
                 }}
                 className="w-full bg-transparent border-none py-1.5 px-1 text-sm outline-none text-white focus:ring-0 placeholder:text-slate-400 font-mono"
                 required

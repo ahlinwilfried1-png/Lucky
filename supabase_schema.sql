@@ -73,7 +73,8 @@ CREATE TABLE IF NOT EXISTS public.withdrawals (
     amount NUMERIC NOT NULL DEFAULT 0,
     provider TEXT NOT NULL,
     status TEXT NOT NULL DEFAULT 'pending' CHECK (status IN ('pending', 'approved', 'rejected')),
-    date TIMESTAMP WITH TIME ZONE NOT NULL DEFAULT now()
+    date TIMESTAMP WITH TIME ZONE NOT NULL DEFAULT now(),
+    payment_proof TEXT
 );
 
 -- 6. Create Referral Commissions Table

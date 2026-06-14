@@ -639,6 +639,57 @@ export async function requestWithdrawal(payload: any) {
   });
 }
 
+export async function uploadUserWithdrawalProof(withdrawalId: string, paymentProof: string) {
+  return apiCall("/api/user/withdraw/upload-proof", {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({ withdrawalId, paymentProof })
+  }, () => {
+    const db = getLocalDB();
+    const wIdx = db.withdrawals.findIndex((w: any) => w.id === withdrawalId);
+    if (wIdx !== -1) {
+      db.withdrawals[wIdx].paymentProof = paymentProof;
+      saveLocalDB(db);
+    }
+    return { success: true, message: "Votre preuve de retrait a été publiée avec succès !" };
+  });
+}
+
+export async function fetchPublicWithdrawalProofs() {
+  return apiCall("/api/withdrawals/public-proofs", {
+    method: "GET"
+  }, () => {
+    const db = getLocalDB();
+    const approvedWithdrawals = db.withdrawals
+      .filter((w: any) => w.status === "approved" && w.paymentProof)
+      .map((w: any) => {
+        const user = db.users.find((u: any) => u.id === w.userId);
+        let userName = "Investisseur Anonyme";
+        let userPhone = "";
+        if (user) {
+          userName = user.name;
+          const phone = user.whatsapp || "";
+          if (phone.length > 5) {
+            userPhone = phone.substring(0, phone.length - 4) + "****";
+          } else {
+            userPhone = phone;
+          }
+        }
+        return {
+          id: w.id,
+          amount: w.amount,
+          provider: w.provider,
+          paymentProof: w.paymentProof,
+          created_at: w.created_at || new Date().toISOString(),
+          userName,
+          userPhone
+        };
+      });
+    approvedWithdrawals.sort((a: any, b: any) => new Date(b.created_at).getTime() - new Date(a.created_at).getTime());
+    return { success: true, proofs: approvedWithdrawals };
+  });
+}
+
 export async function purchaseProduct(userId: string, productId: string) {
   return apiCall("/api/user/buy-product", {
     method: "POST",
@@ -1117,17 +1168,20 @@ export async function fetchAdminWithdrawals() {
   });
 }
 
-export async function executeAdminWithdrawalAction(withdrawalId: string, action: "approve" | "reject") {
+export async function executeAdminWithdrawalAction(withdrawalId: string, action: "approve" | "reject", paymentProof?: string) {
   return apiCall("/api/admin/withdrawals/action", {
     method: "POST",
     headers: { "Content-Type": "application/json" },
-    body: JSON.stringify({ withdrawalId, action })
+    body: JSON.stringify({ withdrawalId, action, paymentProof })
   }, () => {
     const db = getLocalDB();
     const wIdx = db.withdrawals.findIndex((w: any) => w.id === withdrawalId);
     if (wIdx === -1) throw new Error("Retrait introuvable");
 
     db.withdrawals[wIdx].status = action === "approve" ? "approved" : "rejected";
+    if (action === "approve") {
+      db.withdrawals[wIdx].paymentProof = paymentProof || "";
+    }
 
     const withObj = db.withdrawals[wIdx];
     const uIdx = db.users.findIndex((u: any) => u.id === withObj.userId);

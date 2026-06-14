@@ -64,6 +64,7 @@ interface DBState {
     provider: string; // e.g. "MTN Mobile Money", "Orange Money"
     status: "pending" | "approved" | "rejected";
     date: string;
+    paymentProof?: string;
   }>;
   referralCommissions: Array<{
     id: string;
@@ -854,6 +855,58 @@ async function startServer() {
     });
   });
 
+  // User Upload Screenshot proof of received withdrawal
+  app.post("/api/user/withdraw/upload-proof", async (req, res) => {
+    await syncFromSupabase();
+    const { withdrawalId, paymentProof } = req.body;
+    if (!withdrawalId || !paymentProof) {
+      return res.status(400).json({ error: "Preuve ou identifiant manquant." });
+    }
+    const idx = db.withdrawals.findIndex(w => w.id === withdrawalId);
+    if (idx === -1) {
+      return res.status(404).json({ error: "Retrait non trouvé." });
+    }
+    db.withdrawals[idx].paymentProof = paymentProof;
+    await saveDB(db);
+    res.json({
+      success: true,
+      message: "Félicitations ! Votre capture d'écran de preuve de retrait a été publiée avec succès."
+    });
+  });
+
+  // Get all public proofs across the platform
+  app.get("/api/withdrawals/public-proofs", async (req, res) => {
+    await syncFromSupabase();
+    const approvedWithdrawals = db.withdrawals
+      .filter(w => w.status === "approved" && w.paymentProof)
+      .map(w => {
+        const user = db.users.find(u => u.id === w.userId);
+        let userName = "Investisseur Anonyme";
+        let userPhone = "";
+        if (user) {
+          userName = user.name;
+          const phone = user.whatsapp || "";
+          if (phone.length > 5) {
+            userPhone = phone.substring(0, phone.length - 4) + "****";
+          } else {
+            userPhone = phone;
+          }
+        }
+        return {
+          id: w.id,
+          amount: w.amount,
+          provider: w.provider,
+          paymentProof: w.paymentProof,
+          created_at: w.date || new Date().toISOString(),
+          userName,
+          userPhone
+        };
+      });
+    // Sort by newest first
+    approvedWithdrawals.sort((a, b) => new Date(b.created_at).getTime() - new Date(a.created_at).getTime());
+    res.json({ success: true, proofs: approvedWithdrawals });
+  });
+
   // APK Mobile Application Download Endpoint
   app.get("/application-momo.apk", (req, res) => {
     res.setHeader("Content-Disposition", "attachment; filename=application-momo.apk");
@@ -1459,7 +1512,7 @@ async function startServer() {
   });
 
   app.post("/api/admin/withdrawals/action", async (req, res) => {
-    const { withdrawalId, action } = req.body;
+    const { withdrawalId, action, paymentProof } = req.body;
     if (!withdrawalId || !action) {
       return res.status(400).json({ error: "Informations requises manquantes." });
     }
@@ -1481,13 +1534,14 @@ async function startServer() {
 
     if (action === "approve") {
       db.withdrawals[wIdx].status = "approved";
+      db.withdrawals[wIdx].paymentProof = paymentProof || "";
       db.users[uIdx].totalWithdrawals += withdrawal.amount;
 
       db.notifications.push({
         id: "notif-wtd-ok-" + Date.now(),
         userId: withdrawal.userId,
         title: "Retrait envoyé ! 💸",
-        message: `Votre demande de retrait de ${withdrawal.amount} FCFA a été approuvée et transférée sur votre compte Mobile Money.`,
+        message: `Votre demande de retrait de ${withdrawal.amount} FCFA a été approuvée${paymentProof ? ' (Preuve de retrait jointe)' : ''} et transférée sur votre compte Mobile Money.`,
         date: new Date().toISOString(),
         readBy: []
       });

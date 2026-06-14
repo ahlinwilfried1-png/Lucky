@@ -77,6 +77,7 @@ export default function AdminView({ adminUserId, onExit, lang }: AdminViewProps)
   const [userSearchTerm, setUserSearchTerm] = useState("");
   const [deposits, setDeposits] = useState<any[]>([]);
   const [withdrawals, setWithdrawals] = useState<any[]>([]);
+  const [paymentProofs, setPaymentProofs] = useState<Record<string, string>>({});
 
   // Simple client-side search filtering
   const filteredUsers = users.filter((u) => {
@@ -279,6 +280,17 @@ export default function AdminView({ adminUserId, onExit, lang }: AdminViewProps)
     reloadPlatformSettings();
   }, [activeSegment]);
 
+  // Periodic background fallback syncer to keep lists fresh across all devices (e.g. mobile signups)
+  useEffect(() => {
+    const fallbackSyncInterval = setInterval(() => {
+      reloadAdminStats();
+      reloadUsers();
+      reloadDeposits();
+      reloadWithdrawals();
+    }, 15000);
+    return () => clearInterval(fallbackSyncInterval);
+  }, []);
+
   // Handle active sub conversation loading and real-time support, deposits, and status pulls
   useEffect(() => {
     if (activeChatUserId) {
@@ -353,10 +365,29 @@ export default function AdminView({ adminUserId, onExit, lang }: AdminViewProps)
       )
       .subscribe();
 
+    // 4. Live Users & Registrations tracker
+    const usersChannel = supabase
+      .channel("admin-users")
+      .on(
+        "postgres_changes",
+        {
+          event: "*",
+          schema: "public",
+          table: "users"
+        },
+        () => {
+          console.log("Supabase Realtime: Users data change detected!");
+          reloadUsers();
+          reloadAdminStats();
+        }
+      )
+      .subscribe();
+
     return () => {
       supabase.removeChannel(ticketsChannel);
       supabase.removeChannel(depositsChannel);
       supabase.removeChannel(withdrawalsChannel);
+      supabase.removeChannel(usersChannel);
     };
   }, [activeChatUserId]);
 
@@ -527,13 +558,23 @@ export default function AdminView({ adminUserId, onExit, lang }: AdminViewProps)
   // Process withdrawal checkout
   const handleProcessWithdrawal = async (withdrawalId: string, action: "approve" | "reject") => {
     const word = action === "approve" ? "PAYER" : "REFUSER ET REMBOURSER";
+    const proof = paymentProofs[withdrawalId] || "";
     requestConfirmation(
       `${action === "approve" ? "Validation de Paiement" : "Refus de Retrait"}`,
-      `Êtes-vous sûr de vouloir ${word} cette demande de retrait ?`,
+      `Êtes-vous sûr de vouloir ${word} cette demande de retrait ? ${
+        action === "approve" 
+          ? (proof ? "(Preuve de paiement incluseh ✔️)" : "(Aucune preuve de paiement n'a été rédigée, elle sera validée sans preuve)")
+          : ""
+      }`,
       async () => {
         try {
-          const res = await executeAdminWithdrawalAction(withdrawalId, action);
+          const res = await executeAdminWithdrawalAction(withdrawalId, action, proof);
           setNotifyMsg(res.message || "Résultat du retrait enregistré.");
+          setPaymentProofs(prev => {
+            const copy = { ...prev };
+            delete copy[withdrawalId];
+            return copy;
+          });
           reloadWithdrawals();
           reloadAdminStats();
         } catch (err: any) {
@@ -541,6 +582,20 @@ export default function AdminView({ adminUserId, onExit, lang }: AdminViewProps)
         }
       }
     );
+  };
+
+  const handleProofPhotoUpload = (withdrawalId: string, event: React.ChangeEvent<HTMLInputElement>) => {
+    const file = event.target.files?.[0];
+    if (file) {
+      const reader = new FileReader();
+      reader.onload = () => {
+        setPaymentProofs(prev => ({
+          ...prev,
+          [withdrawalId]: reader.result as string
+        }));
+      };
+      reader.readAsDataURL(file);
+    }
   };
 
   // Create investment plan VIP Product type
@@ -972,8 +1027,14 @@ export default function AdminView({ adminUserId, onExit, lang }: AdminViewProps)
                 </div>
                 <div className="text-xs font-mono text-slate-500 flex items-center gap-2">
                   <span className="px-2.5 py-1 rounded bg-red-50 text-red-600 font-bold border border-red-100">
-                    {filteredUsers.length} trouv�             {/* Ajuster un solde en direct drawer modal popup configuration */}
-             {selectedUser && (
+                    {filteredUsers.length} trouvés
+                  </span>
+                </div>
+              </div>
+            </div>
+
+            {/* Ajuster un solde en direct drawer modal popup configuration */}
+            {selectedUser && (
                <div className="bg-amber-50 border border-amber-200/80 rounded-2xl p-5 space-y-3">
                  <div className="flex justify-between items-center">
                    <h3 className="text-xs font-bold font-mono text-amber-800 uppercase">Ajustement exceptionnel de solde : {selectedUser.name}</h3>
@@ -1012,20 +1073,16 @@ export default function AdminView({ adminUserId, onExit, lang }: AdminViewProps)
                    </tr>
                  </thead>
                  <tbody className="divide-y divide-slate-100">
-                   {filteredUsers.length === 0 ? (
-                    <tr>
-                      <td colSpan={7} className="p-8 text-center text-slate-500 font-mono text-xs">
-                        ⚠️ Aucun investisseur trouvé pour "{userSearchTerm}"
-                      </td>
-                    </tr>
-                  ) : (
-                    filteredUsers.map(u => (
-                      <tr key={u.id} className="hover:bg-slate-50/60 transition">>
-                    </tr>
-                  ) : (
-                    filteredUsers.map(u => (
-                      <tr key={u.id} className="hover:bg-white/5/30">
-                        <td className="p-4 font-mono">
+                    {filteredUsers.length === 0 ? (
+                      <tr>
+                        <td colSpan={7} className="p-8 text-center text-slate-500 font-mono text-xs">
+                          ⚠️ Aucun investisseur trouvé pour "{userSearchTerm}"
+                        </td>
+                      </tr>
+                    ) : (
+                      filteredUsers.map(u => (
+                        <tr key={u.id} className="hover:bg-slate-50/30 transition">
+<td className="p-4 font-mono">
                           <span className="block font-semibold text-slate-800">{u.whatsapp}</span>
                           <span className="block text-[10px] text-gray-400">{u.country}</span>
                         </td>
@@ -1318,20 +1375,22 @@ export default function AdminView({ adminUserId, onExit, lang }: AdminViewProps)
 
                       <div className="md:text-right space-x-2 font-mono">
                         {isPending ? (
-                          <>
-                            <button
-                              onClick={() => handleProcessWithdrawal(w.id, "reject")}
-                              className="px-3 py-1.5 bg-rose-500/10 hover:bg-rose-500 hover:text-black border border-rose-500/20 text-rose-400 rounded-xl text-xs font-medium transition"
-                            >
-                              Refuser & Rembourser ❌
-                            </button>
-                            <button
-                              onClick={() => handleProcessWithdrawal(w.id, "approve")}
-                              className="px-4 py-1.5 bg-gradient-to-r from-emerald-500 to-green-600 hover:from-emerald-600 hover:to-green-700 text-black font-bold rounded-xl text-xs transition shadow-lg shadow-emerald-500/10"
-                            >
-                              Marquer Payé (MoMo) ✅
-                            </button>
-                          </>
+                          <div className="flex flex-col gap-2 md:items-end">
+                            <div className="flex gap-2">
+                              <button
+                                onClick={() => handleProcessWithdrawal(w.id, "reject")}
+                                className="px-3 py-1.5 bg-rose-500/10 hover:bg-rose-500 hover:text-black border border-rose-500/20 text-rose-400 rounded-xl text-xs font-medium transition"
+                              >
+                                Refuser & Rembourser ❌
+                              </button>
+                              <button
+                                onClick={() => handleProcessWithdrawal(w.id, "approve")}
+                                className="px-4 py-1.5 bg-gradient-to-r from-emerald-500 to-green-600 hover:from-emerald-600 hover:to-green-700 text-black font-bold rounded-xl text-xs transition shadow-lg shadow-emerald-500/10"
+                              >
+                                Marquer Payé (MoMo) ✅
+                              </button>
+                            </div>
+                          </div>
                         ) : (
                           <span className={`px-3 py-1 rounded text-xs font-bold uppercase inline-block ${
                             w.status === "approved" ? "bg-emerald-500/10 text-emerald-400" : "bg-rose-500/10 text-rose-400"
@@ -1340,6 +1399,86 @@ export default function AdminView({ adminUserId, onExit, lang }: AdminViewProps)
                           </span>
                         )}
                       </div>
+
+                      {isPending && (
+                        <div className="col-span-full border-t border-white/5 pt-4 mt-2 grid md:grid-cols-2 gap-4">
+                          <div className="space-y-1.5">
+                            <label className="text-[10px] font-bold text-[#FBBF24] block uppercase font-mono">
+                              ✍️ Référence ou Message de Confirmation (Optionnel) :
+                            </label>
+                            <input
+                              type="text"
+                              placeholder="Ex: ID Tx: TXN829102 ou Code de référence Mobile Money..."
+                              value={paymentProofs[w.id] && !paymentProofs[w.id].startsWith("data:") ? paymentProofs[w.id] : ""}
+                              onChange={(e) => setPaymentProofs(prev => ({ ...prev, [w.id]: e.target.value }))}
+                              className="w-full bg-[#03061A] text-white placeholder-slate-500 text-xs px-3 py-2 rounded-xl border border-white/10 focus:border-[#D4AF37] outline-none font-mono"
+                            />
+                          </div>
+
+                          <div className="space-y-1.5">
+                            <label className="text-[10px] font-bold text-[#FBBF24] block uppercase font-mono">
+                              📸 Image ou Capture d'Écran de la Preuve (Optionnel) :
+                            </label>
+                            <div className="flex items-center gap-3">
+                              <input
+                                type="file"
+                                accept="image/*"
+                                id={`proof-file-input-${w.id}`}
+                                onChange={(e) => handleProofPhotoUpload(w.id, e)}
+                                className="hidden"
+                              />
+                              <label
+                                htmlFor={`proof-file-input-${w.id}`}
+                                className="px-3 py-2 bg-white/5 border border-white/10 hover:border-[#D4AF37] rounded-xl text-xs text-slate-300 font-bold cursor-pointer transition flex items-center gap-1.5 hover:bg-white/10 font-mono"
+                              >
+                                {paymentProofs[w.id]?.startsWith("data:") ? "🔄 Changer la Capture" : "📁 Sélectionner Capture"}
+                              </label>
+                              {paymentProofs[w.id]?.startsWith("data:") && (
+                                <div className="relative w-12 h-12 rounded overflow-hidden border border-[#D4AF37] bg-black">
+                                  <img 
+                                    src={paymentProofs[w.id]} 
+                                    alt="Proof Preview" 
+                                    className="w-full h-full object-cover" 
+                                  />
+                                  <button
+                                    onClick={() => setPaymentProofs(prev => {
+                                      const copy = { ...prev };
+                                      delete copy[w.id];
+                                      return copy;
+                                    })}
+                                    className="absolute inset-0 bg-red-600/80 hover:bg-red-700/80 text-white font-mono text-[9px] flex items-center justify-center opacity-0 hover:opacity-100 transition"
+                                  >
+                                    Suppr
+                                  </button>
+                                </div>
+                              )}
+                            </div>
+                          </div>
+                        </div>
+                      )}
+
+                      {!isPending && w.paymentProof && (
+                        <div className="col-span-full border-t border-white/5 pt-4 mt-2 space-y-1.5">
+                          <span className="text-[10px] text-emerald-400 font-bold uppercase block font-mono">
+                            Preuve officielle de transfert associée :
+                          </span>
+                          {w.paymentProof.startsWith("data:") || w.paymentProof.startsWith("http") ? (
+                            <div className="max-w-xs rounded overflow-hidden border border-emerald-500/20 bg-black">
+                              <img 
+                                src={w.paymentProof} 
+                                alt="Preuve de Retrait" 
+                                className="max-h-32 object-contain cursor-pointer hover:opacity-80 transition"
+                                onClick={() => window.open(w.paymentProof, '_blank')}
+                                referrerPolicy="no-referrer"
+                              />
+                            </div>
+                          ) : (
+                            <p className="text-xs bg-emerald-500/5 text-slate-300 p-2 rounded-xl border border-emerald-500/10 font-mono whitespace-pre-wrap">
+                              {w.paymentProof}
+                            </p>
+                          )}
+                        </div>
+                      )}
                     </div>
                   );
                 })}

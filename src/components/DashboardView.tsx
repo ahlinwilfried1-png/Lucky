@@ -37,7 +37,9 @@ import {
   sendChatMessage, 
   fetchChatHistory,
   fetchAdminProducts,
-  fetchPlatformSettings
+  fetchPlatformSettings,
+  uploadUserWithdrawalProof,
+  fetchPublicWithdrawalProofs
 } from "../api";
 import { User, Investment, Deposit, Withdrawal, Notification, ChatMessage, Product } from "../types";
 import { supabase } from "../supabase";
@@ -79,6 +81,10 @@ export default function DashboardView({ userId, onLogout, lang, onNavigate }: Da
   // Notifications live
   const [notifications, setNotifications] = useState<Notification[]>([]);
   const [unreadNotifications, setUnreadNotifications] = useState(0);
+
+  // Public community withdrawal proofs state
+  const [publicProofs, setPublicProofs] = useState<any[]>([]);
+  const [selectedProofs, setSelectedProofs] = useState<Record<string, string>>({});
 
   // States
   const [refCopied, setRefCopied] = useState(false);
@@ -197,6 +203,50 @@ export default function DashboardView({ userId, onLogout, lang, onNavigate }: Da
     setModalOpen(true);
   };
 
+  const [uploadingProofId, setUploadingProofId] = useState<string | null>(null);
+
+  const handleUserSelectProof = (withdrawalId: string, event: React.ChangeEvent<HTMLInputElement>) => {
+    const file = event.target.files?.[0];
+    if (!file) return;
+
+    const reader = new FileReader();
+    reader.onload = () => {
+      const base64 = reader.result as string;
+      setSelectedProofs(prev => ({
+        ...prev,
+        [withdrawalId]: base64
+      }));
+    };
+    reader.onerror = () => {
+      triggerAlert("Erreur", "Une erreur est survenue lors de la lecture de l'image.");
+    };
+    reader.readAsDataURL(file);
+  };
+
+  const handleUserSubmitProof = async (withdrawalId: string) => {
+    const base64 = selectedProofs[withdrawalId];
+    if (!base64) return;
+
+    setUploadingProofId(withdrawalId);
+    try {
+      await uploadUserWithdrawalProof(withdrawalId, base64);
+      triggerAlert(
+        "Preuve Transmise ✔️",
+        "Merci ! Votre capture d'écran de preuve de retrait a bien été enregistrée et publiée avec succès."
+      );
+      setSelectedProofs(prev => {
+        const copy = { ...prev };
+        delete copy[withdrawalId];
+        return copy;
+      });
+      loadProfile();
+    } catch (err: any) {
+      triggerAlert("Erreur de chargement", err.message || "Impossible d'envoyer la preuve de retrait.");
+    } finally {
+      setUploadingProofId(null);
+    }
+  };
+
   // Auto refresh profile helper
   const loadProfile = () => {
     setProfileLoading(true);
@@ -229,6 +279,11 @@ export default function DashboardView({ userId, onLogout, lang, onNavigate }: Da
       setNotifications(data.notifications);
       setUnreadNotifications(data.unreadCount);
     }).catch(err => console.error(err));
+
+    // Load public community withdrawal proofs
+    fetchPublicWithdrawalProofs().then(data => {
+      setPublicProofs(data.proofs || []);
+    }).catch(err => console.error("Plan public proofs fetch fail:", err));
   };
 
   useEffect(() => {
@@ -871,75 +926,334 @@ export default function DashboardView({ userId, onLogout, lang, onNavigate }: Da
 
             {/* Retrait View */}
             {activeSubView === "withdraw" && (
-              <div className="bg-[#0A0E17] border border-white/5 rounded-3xl p-6 space-y-4 gold-glow">
-                <div className="flex items-center gap-2 border-b border-white/5 pb-3">
-                  <ArrowDownLeft className="w-5 h-5 text-[#D4AF37]" />
-                  <h2 className="text-sm font-bold uppercase font-mono tracking-wider text-slate-100">Demander un Retrait</h2>
-                </div>
-
-                <div className="bg-[#020617] border border-white/5 rounded-2xl p-4 flex justify-between items-center text-xs">
-                  <div>
-                    <span className="text-slate-400 block uppercase text-[10px]">Votre solde retirable</span>
-                    <span className="text-lg font-bold text-[#D4AF37]">{(profile?.balance ?? 0).toLocaleString()} FCFA</span>
-                  </div>
-                  <span className="px-2 py-0.5 rounded text-[10px] bg-[#D4AF37]/10 text-[#D4AF37] font-mono">RETRAIT DE 1K À 500K</span>
-                </div>
-
-                <form onSubmit={handleWithdrawalSubmit} className="space-y-4">
-                  <div>
-                    <label className="block text-[11px] font-mono text-slate-400 uppercase mb-1.5 font-semibold">Opérateur Mobile Money *</label>
-                    <select
-                      value={withdrawalProvider}
-                      onChange={(e) => setWithdrawalProvider(e.target.value)}
-                      className="w-full bg-[#020617] border border-white/10 rounded-xl py-2.5 px-3 text-xs focus:border-[#D4AF37] outline-none font-mono text-slate-100 cursor-pointer"
-                    >
-                      <option value="Tmoney">Tmoney (Togocom)</option>
-                      <option value="Moov Money">Moov Money (Flooz)</option>
-                    </select>
+              <div className="space-y-4">
+                <div className="bg-[#0A0E17] border border-white/5 rounded-3xl p-6 space-y-4 gold-glow">
+                  <div className="flex items-center gap-2 border-b border-white/5 pb-3">
+                    <ArrowDownLeft className="w-5 h-5 text-[#D4AF37]" />
+                    <h2 className="text-sm font-bold uppercase font-mono tracking-wider text-slate-100">Demander un Retrait</h2>
                   </div>
 
-                  <div>
-                    <label className="block text-[11px] font-mono text-slate-400 uppercase mb-1.5 font-semibold">Numéro de Réception du Paiement *</label>
-                    <div className="relative flex items-center">
-                      <div className="absolute left-1 top-0 bottom-0 flex items-center bg-[#1E293B]/20 border-r border-white/10 px-3 text-xs text-slate-400 font-mono rounded-l-xl">
-                        <span className="mr-1.5 select-none text-base">🇹🇬</span>
-                        <span className="font-semibold">+228</span>
+                  <div className="bg-[#020617] border border-white/5 rounded-2xl p-4 flex justify-between items-center text-xs">
+                    <div>
+                      <span className="text-slate-400 block uppercase text-[10px]">Votre solde retirable</span>
+                      <span className="text-lg font-bold text-[#D4AF37]">{(profile?.balance ?? 0).toLocaleString()} FCFA</span>
+                    </div>
+                    <span className="px-2 py-0.5 rounded text-[10px] bg-[#D4AF37]/10 text-[#D4AF37] font-mono">RETRAIT DE 1K À 500K</span>
+                  </div>
+
+                  <form onSubmit={handleWithdrawalSubmit} className="space-y-4">
+                    <div>
+                      <label className="block text-[11px] font-mono text-slate-400 uppercase mb-1.5 font-semibold">Opérateur Mobile Money *</label>
+                      <select
+                        value={withdrawalProvider}
+                        onChange={(e) => setWithdrawalProvider(e.target.value)}
+                        className="w-full bg-[#020617] border border-white/10 rounded-xl py-2.5 px-3 text-xs focus:border-[#D4AF37] outline-none font-mono text-slate-100 cursor-pointer"
+                      >
+                        <option value="Tmoney">Tmoney (Togocom)</option>
+                        <option value="Moov Money">Moov Money (Flooz)</option>
+                      </select>
+                    </div>
+
+                    <div>
+                      <label className="block text-[11px] font-mono text-slate-400 uppercase mb-1.5 font-semibold">Numéro de Réception du Paiement *</label>
+                      <div className="relative flex items-center">
+                        <div className="absolute left-1 top-0 bottom-0 flex items-center bg-[#1E293B]/20 border-r border-white/10 px-3 text-xs text-slate-400 font-mono rounded-l-xl">
+                          <span className="mr-1.5 select-none text-base">🇹🇬</span>
+                          <span className="font-semibold">+228</span>
+                        </div>
+                        <input
+                          type="text"
+                          placeholder="Ex: 90123456"
+                          value={withdrawalPhone}
+                          onChange={(e) => {
+                            const cleaned = e.target.value.replace(/[^0-9]/g, "");
+                            setWithdrawalPhone(cleaned);
+                          }}
+                          className="w-full bg-[#020617] border border-white/10 rounded-xl py-2.5 pl-24 pr-3 text-xs focus:border-[#D4AF37] outline-none font-mono text-slate-100"
+                          required
+                        />
                       </div>
+                      <p className="text-[10px] text-slate-500 font-mono mt-1">Saisissez votre numéro national à 8 chiffres (L'indicateur +228 est appliqué).</p>
+                    </div>
+
+                    <div>
+                      <label className="block text-[11px] font-mono text-slate-400 uppercase mb-1.5 font-semibold">Montant du Retrait (FCFA) *</label>
                       <input
-                        type="text"
-                        placeholder="Ex: 90123456"
-                        value={withdrawalPhone}
-                        onChange={(e) => {
-                          const cleaned = e.target.value.replace(/[^0-9]/g, "");
-                          setWithdrawalPhone(cleaned);
-                        }}
-                        className="w-full bg-[#020617] border border-white/10 rounded-xl py-2.5 pl-24 pr-3 text-xs focus:border-[#D4AF37] outline-none font-mono text-slate-100"
+                        type="number"
+                        placeholder="Min. 1 000 FCFA"
+                        value={withdrawalAmount}
+                        onChange={(e) => setWithdrawalAmount(e.target.value)}
+                        className="w-full bg-[#020617] border border-white/10 rounded-xl py-2.5 px-3 text-xs focus:border-[#D4AF37] outline-none font-mono text-slate-100"
                         required
                       />
                     </div>
-                    <p className="text-[10px] text-slate-500 font-mono mt-1">Saisissez votre numéro national à 8 chiffres (L'indicateur +228 est appliqué).</p>
+
+                    <button
+                      type="submit"
+                      disabled={submitting}
+                      className="w-full py-3.5 rounded-xl bg-[#D4AF37] hover:bg-[#B8962F] text-black font-bold text-xs tracking-wide transition disabled:opacity-50 cursor-pointer animate-pulse-subtle"
+                    >
+                      {submitting ? "Traitement sécurisé..." : "Confirmer la Demande"}
+                    </button>
+                  </form>
+
+                  <div className="pt-4 border-t border-white/5 space-y-2 select-none">
+                    <p className="text-[10px] text-amber-400 font-mono font-bold tracking-wider uppercase mb-1.5 text-center">
+                      ⚠️ Conditions Générales de Retrait
+                    </p>
+                    <div className="grid grid-cols-2 gap-2 text-[11px] font-mono">
+                      <div className="bg-[#020617] border border-white/5 rounded-xl p-2.5 flex flex-col justify-between">
+                        <span className="text-slate-400 text-[9px] uppercase">📅 Retrait disponible</span>
+                        <span className="text-slate-100 font-bold mt-0.5">Lundi à Dimanche</span>
+                      </div>
+                      <div className="bg-[#020617] border border-white/5 rounded-xl p-2.5 flex flex-col justify-between">
+                        <span className="text-slate-400 text-[9px] uppercase">🕐 Heure de retrait</span>
+                        <span className="text-slate-100 font-bold mt-0.5">9h à 17h</span>
+                      </div>
+                      <div className="bg-[#020617] border border-white/5 rounded-xl p-2.5 flex flex-col justify-between">
+                        <span className="text-slate-400 text-[9px] uppercase">💸 Frais de retrait</span>
+                        <span className="text-[#D4AF37] font-extrabold mt-0.5">12%</span>
+                      </div>
+                      <div className="bg-[#020617] border border-white/5 rounded-xl p-2.5 flex flex-col justify-between">
+                        <span className="text-slate-400 text-[9px] uppercase">⌛ Durée d'attente</span>
+                        <span className="text-slate-100 font-bold mt-0.5">Moins de 10 min à 24h</span>
+                      </div>
+                    </div>
+                  </div>
+                </div>
+
+                {/* Preuves de retrait / Historique & Preuves directes dans l'onglet Retrait */}
+                <div className="bg-[#0A0E17] border border-white/5 rounded-3xl p-6 space-y-4">
+                  <div className="flex items-center justify-between border-b border-white/5 pb-3">
+                    <div className="flex items-center gap-2">
+                      <span className="text-emerald-400 text-sm">📁</span>
+                      <h3 className="text-xs font-bold uppercase font-mono tracking-wider text-slate-100">Vos Preuves de Retraits</h3>
+                    </div>
+                    <span className="text-[10px] bg-emerald-500/10 text-emerald-400 font-mono px-2 py-0.5 rounded-full uppercase font-bold">
+                      {withdrawals.filter(w => w.status === "approved" && w.paymentProof).length} Payés avec preuve
+                    </span>
                   </div>
 
-                  <div>
-                    <label className="block text-[11px] font-mono text-slate-400 uppercase mb-1.5 font-semibold">Montant du Retrait (FCFA) *</label>
-                    <input
-                      type="number"
-                      placeholder="Min. 1 000 FCFA"
-                      value={withdrawalAmount}
-                      onChange={(e) => setWithdrawalAmount(e.target.value)}
-                      className="w-full bg-[#020617] border border-white/10 rounded-xl py-2.5 px-3 text-xs focus:border-[#D4AF37] outline-none font-mono text-slate-100"
-                      required
-                    />
+                  {withdrawals.length === 0 ? (
+                    <p className="text-xs text-gray-500 font-mono text-center py-4">Aucune demande de retrait effectuée.</p>
+                  ) : (
+                    <div className="space-y-4 font-mono text-xs max-h-[300px] overflow-y-auto pr-1">
+                      {withdrawals.map(w => (
+                        <div key={w.id} className="p-3 rounded-2xl bg-[#020617] border border-white/5 flex flex-col gap-2.5">
+                          <div className="flex justify-between items-center w-full">
+                            <div>
+                              <p className="font-bold text-white text-xs">{w.amount.toLocaleString()} FCFA</p>
+                              <span className="block text-[10px] text-gray-400 mt-0.5">{w.provider} • {w.whatsapp}</span>
+                            </div>
+                            <div>
+                              <span className={`px-2 py-0.5 rounded text-[10px] font-bold ${
+                                w.status === "approved" ? "bg-emerald-500/10 text-emerald-400" :
+                                w.status === "rejected" ? "bg-rose-500/10 text-rose-400" : "bg-amber-500/10 text-amber-500"
+                              }`}>
+                                {w.status === "approved" ? "Payé ✔️" : w.status === "rejected" ? "Refusé ❌" : "En cours ⌛"}
+                              </span>
+                            </div>
+                          </div>
+
+                          {w.paymentProof ? (
+                            <div className="mt-1 border-t border-white/5 pt-2 flex flex-col gap-2">
+                              <span className="text-[10px] text-[#22C55E] font-bold uppercase flex items-center gap-1 font-sans">
+                                🔗 Preuve de Retrait officielle :
+                              </span>
+                              {w.paymentProof.startsWith("data:") || w.paymentProof.startsWith("http") ? (
+                                <div className="relative rounded-lg overflow-hidden border border-emerald-500/20 bg-black/40 max-h-48">
+                                  <img 
+                                    src={w.paymentProof} 
+                                    alt="Preuve du transfert" 
+                                    className="max-h-40 w-full object-contain cursor-pointer transition hover:opacity-90"
+                                    onClick={() => window.open(w.paymentProof, '_blank')}
+                                    referrerPolicy="no-referrer"
+                                  />
+                                </div>
+                              ) : (
+                                <p className="text-[11px] text-[#22C55E] bg-emerald-500/5 p-2 rounded-xl border border-emerald-500/10 whitespace-pre-wrap font-mono font-medium leading-normal">
+                                  {w.paymentProof}
+                                </p>
+                              )}
+
+                              {w.status === "approved" && (
+                                <div className="mt-2 text-right">
+                                  {selectedProofs[w.id] ? (
+                                    <div className="inline-flex flex-col items-end gap-2 bg-[#020617] p-2.5 rounded-xl border border-emerald-500/25">
+                                      <div className="relative rounded overflow-hidden border border-white/10 max-w-[120px]">
+                                        <img src={selectedProofs[w.id]} alt="Nouvel aperçu" className="max-h-20 object-contain" />
+                                        <button
+                                          type="button"
+                                          onClick={() => setSelectedProofs(prev => {
+                                            const copy = { ...prev };
+                                            delete copy[w.id];
+                                            return copy;
+                                          })}
+                                          className="absolute top-0.5 right-0.5 bg-rose-600 hover:bg-rose-700 text-white rounded-full p-0.5 text-[8px] leading-none transition"
+                                          title="Annuler"
+                                          id={`cancel-change-${w.id}`}
+                                        >
+                                          ❌
+                                        </button>
+                                      </div>
+                                      <button
+                                        type="button"
+                                        onClick={() => handleUserSubmitProof(w.id)}
+                                        disabled={uploadingProofId === w.id}
+                                        id={`confirm-change-btn-${w.id}`}
+                                        className="px-2.5 py-1 bg-[#22C55E] hover:bg-[#16a34a] text-black font-extrabold rounded text-[9px] uppercase tracking-wider font-mono transition"
+                                      >
+                                        {uploadingProofId === w.id ? "⌛..." : "✅ Enregistrer"}
+                                      </button>
+                                    </div>
+                                  ) : (
+                                    <div>
+                                      <input
+                                        type="file"
+                                        accept="image/*"
+                                        id={`user-proof-input-change-${w.id}`}
+                                        onChange={(e) => handleUserSelectProof(w.id, e)}
+                                        className="hidden"
+                                        disabled={uploadingProofId === w.id}
+                                      />
+                                      <label
+                                        htmlFor={`user-proof-input-change-${w.id}`}
+                                        className="inline-flex px-2.5 py-1 bg-white/5 border border-white/10 hover:border-emerald-500/30 text-slate-400 hover:text-[#22C55E] rounded-lg text-[9px] font-bold cursor-pointer transition font-mono items-center gap-1 justify-center whitespace-nowrap"
+                                      >
+                                        {uploadingProofId === w.id ? "⌛..." : "🔄 Changer ma Capture"}
+                                      </label>
+                                    </div>
+                                  )}
+                                </div>
+                              )}
+                            </div>
+                          ) : w.status === "approved" ? (
+                            <div className="mt-2 bg-[#22C55E]/5 border border-dashed border-[#22C55E]/20 rounded-2xl p-4 text-center space-y-2.5">
+                              <span className="text-[10px] text-amber-400 font-bold uppercase block font-mono tracking-wider animate-pulse">
+                                📢 PUBLIER VOTRE CAPTURE DE RÉCEPTION
+                              </span>
+                              <p className="text-[10.5px] text-slate-300 font-sans leading-relaxed">
+                                Félicitations ! Votre retrait est payé. Veuillez sélectionner et publier la capture d'écran du reçu (MoMo) reçu pour valider publiquement votre gain.
+                              </p>
+
+                              {selectedProofs[w.id] ? (
+                                <div className="space-y-3 pt-1">
+                                  <div className="relative rounded-xl overflow-hidden border border-emerald-500/30 max-w-[200px] mx-auto bg-black/40">
+                                    <img src={selectedProofs[w.id]} alt="Aperçu" className="max-h-32 w-full object-contain mx-auto" />
+                                    <button
+                                      type="button"
+                                      onClick={() => setSelectedProofs(prev => {
+                                        const copy = { ...prev };
+                                        delete copy[w.id];
+                                        return copy;
+                                      })}
+                                      className="absolute top-1 right-1 bg-rose-600 hover:bg-rose-700 text-white rounded-full p-1 transition"
+                                      title="Annuler"
+                                      id={`cancel-proof-${w.id}`}
+                                    >
+                                      ❌
+                                    </button>
+                                  </div>
+                                  <button
+                                    type="button"
+                                    onClick={() => handleUserSubmitProof(w.id)}
+                                    disabled={uploadingProofId === w.id}
+                                    id={`submit-proof-btn-${w.id}`}
+                                    className="w-full px-4 py-2 bg-gradient-to-r from-emerald-500 to-teal-600 hover:from-emerald-600 hover:to-teal-700 text-black font-extrabold rounded-xl text-xs transition flex items-center justify-center gap-1.5 shadow-lg shadow-emerald-500/20 font-mono uppercase"
+                                  >
+                                    {uploadingProofId === w.id ? "⌛ Publication..." : "✅ Publier ma Capture"}
+                                  </button>
+                                </div>
+                              ) : (
+                                <div className="flex justify-center pt-1">
+                                  <input
+                                    type="file"
+                                    accept="image/*"
+                                    id={`user-proof-input-${w.id}`}
+                                    onChange={(e) => handleUserSelectProof(w.id, e)}
+                                    className="hidden"
+                                    disabled={uploadingProofId === w.id}
+                                  />
+                                  <label
+                                    htmlFor={`user-proof-input-${w.id}`}
+                                    className="px-4 py-2 bg-gradient-to-r from-emerald-500 to-teal-600 hover:from-emerald-600 hover:to-teal-700 text-black font-extrabold rounded-xl text-xs cursor-pointer transition flex items-center gap-1.5 shadow-lg shadow-emerald-500/10 font-mono uppercase"
+                                  >
+                                    📸 Sélectionner ma Capture Reçue
+                                  </label>
+                                </div>
+                              )}
+                            </div>
+                          ) : null}
+                        </div>
+                      ))}
+                    </div>
+                  )}
+                </div>
+
+                {/* Preuves publiques de la Communauté */}
+                <div className="bg-[#0A0E17] border border-white/5 rounded-3xl p-6 space-y-4">
+                  <div className="flex items-center justify-between border-b border-white/5 pb-3">
+                    <div className="flex items-center gap-2">
+                      <span className="text-amber-400 text-sm">🌍</span>
+                      <h3 className="text-xs font-bold uppercase font-mono tracking-wider text-slate-100">Preuves de la Communauté</h3>
+                    </div>
+                    <span className="text-[10px] bg-emerald-500/10 text-emerald-400 font-mono px-2 py-0.5 rounded-full uppercase font-bold animate-pulse">
+                      {publicProofs.length} Publiées
+                    </span>
                   </div>
 
-                  <button
-                    type="submit"
-                    disabled={submitting}
-                    className="w-full py-3.5 rounded-xl bg-[#D4AF37] hover:bg-[#B8962F] text-black font-bold text-xs tracking-wide transition disabled:opacity-50 cursor-pointer"
-                  >
-                    {submitting ? "Traitement sécurisé..." : "Confirmer la Demande"}
-                  </button>
-                </form>
+                  {publicProofs.length === 0 ? (
+                    <p className="text-xs text-slate-500 font-mono text-center py-6 select-none">
+                      Aucune capture de retrait n'a été partagée par la communauté pour le moment. Soyez le premier !
+                    </p>
+                  ) : (
+                    <div className="space-y-4 font-mono text-xs max-h-[400px] overflow-y-auto pr-1">
+                      {publicProofs.map((p, idx) => (
+                        <div key={p.id || idx} className="p-3 rounded-2xl bg-[#020617] border border-emerald-500/10 flex flex-col gap-2.5 key-proof">
+                          <div className="flex justify-between items-start w-full">
+                            <div>
+                              <div className="flex items-center gap-1.5 flex-wrap">
+                                <span className="font-bold text-slate-100">{p.userName}</span>
+                                <span className="text-[10px] text-slate-500 font-normal">({p.userPhone})</span>
+                              </div>
+                              <span className="block text-[9.5px] text-slate-400 mt-1">
+                                Retrait {p.provider} • {new Date(p.created_at).toLocaleDateString("fr-FR", {
+                                  day: "2-digit",
+                                  month: "2-digit",
+                                  year: "numeric",
+                                  hour: "2-digit",
+                                  minute: "2-digit"
+                                })}
+                              </span>
+                            </div>
+                            <div className="text-right">
+                              <span className="text-emerald-400 font-extrabold text-xs block">+{p.amount.toLocaleString()} FCFA</span>
+                              <span className="inline-block text-[8.5px] bg-emerald-500/10 text-emerald-400 font-extrabold px-1.5 py-0.5 rounded uppercase tracking-wider mt-1">
+                                Reçu ✔️
+                              </span>
+                            </div>
+                          </div>
+
+                          {p.paymentProof && (p.paymentProof.startsWith("data:") || p.paymentProof.startsWith("http")) ? (
+                            <div className="relative rounded-lg overflow-hidden border border-white/5 bg-black/40">
+                              <img 
+                                src={p.paymentProof} 
+                                alt={`Preuve de retrait de ${p.userName}`} 
+                                className="max-h-48 w-full object-contain cursor-zoom-in transition hover:opacity-95 duration-200"
+                                onClick={() => window.open(p.paymentProof, "_blank")}
+                                referrerPolicy="no-referrer"
+                              />
+                            </div>
+                          ) : p.paymentProof ? (
+                            <p className="text-[11px] text-[#22C55E] bg-emerald-500/5 p-2.5 rounded-xl border border-emerald-500/10 whitespace-pre-wrap leading-normal font-sans">
+                              {p.paymentProof}
+                            </p>
+                          ) : null}
+                        </div>
+                      ))}
+                    </div>
+                  )}
+                </div>
               </div>
             )}
 
@@ -984,19 +1298,151 @@ export default function DashboardView({ userId, onLogout, lang, onNavigate }: Da
                   ) : (
                     <div className="space-y-3 font-mono text-xs">
                       {withdrawals.map(w => (
-                        <div key={w.id} className="p-3 rounded-xl bg-white/5 border border-white/5 flex justify-between items-center">
-                          <div>
-                            <p className="font-bold text-white">{w.amount.toLocaleString()} FCFA</p>
-                            <span className="block text-[10px] text-gray-400">{w.provider} • {w.whatsapp}</span>
+                        <div key={w.id} className="p-3 rounded-xl bg-white/5 border border-white/5 flex flex-col gap-2">
+                          <div className="flex justify-between items-center w-full">
+                            <div>
+                              <p className="font-bold text-white">{w.amount.toLocaleString()} FCFA</p>
+                              <span className="block text-[10px] text-gray-400">{w.provider} • {w.whatsapp}</span>
+                            </div>
+                            <div>
+                              <span className={`px-2 py-0.5 rounded text-[10px] font-bold ${
+                                w.status === "approved" ? "bg-emerald-500/10 text-emerald-400" :
+                                w.status === "rejected" ? "bg-rose-500/10 text-rose-400" : "bg-amber-500/10 text-amber-500"
+                              }`}>
+                                {w.status === "approved" ? "Payé ✔️" : w.status === "rejected" ? "Refusé ❌" : "En cours ⌛"}
+                              </span>
+                            </div>
                           </div>
-                          <div>
-                            <span className={`px-2 py-0.5 rounded text-[10px] font-bold ${
-                              w.status === "approved" ? "bg-emerald-500/10 text-emerald-400" :
-                              w.status === "rejected" ? "bg-rose-500/10 text-rose-400" : "bg-amber-500/10 text-amber-500"
-                            }`}>
-                              {w.status === "approved" ? "Payé" : w.status === "rejected" ? "Refusé" : "En attente"}
-                            </span>
-                          </div>
+
+                          {w.paymentProof ? (
+                            <div className="mt-1 border-t border-white/5 pt-2 flex flex-col gap-1.5">
+                              <span className="text-[10px] text-[#22C55E] font-bold uppercase flex items-center gap-1 font-sans">
+                                🔗 Preuve de Retrait officielle :
+                              </span>
+                              {w.paymentProof.startsWith("data:") || w.paymentProof.startsWith("http") ? (
+                                <div className="relative rounded-lg overflow-hidden border border-emerald-500/20 bg-black/40">
+                                  <img 
+                                    src={w.paymentProof} 
+                                    alt="Preuve du transfert" 
+                                    className="max-h-48 w-full object-contain cursor-pointer transition hover:opacity-95"
+                                    onClick={() => window.open(w.paymentProof, '_blank')}
+                                    referrerPolicy="no-referrer"
+                                  />
+                                </div>
+                              ) : (
+                                <p className="text-[11px] text-white/95 bg-emerald-500/5 p-2 rounded border border-emerald-500/10 whitespace-pre-wrap font-mono">
+                                  {w.paymentProof}
+                                </p>
+                              )}
+
+                              {w.status === "approved" && (
+                                <div className="mt-2 text-right">
+                                  {selectedProofs[w.id] ? (
+                                    <div className="inline-flex flex-col items-end gap-2 bg-[#020617] p-2.5 rounded-xl border border-emerald-500/25">
+                                      <div className="relative rounded overflow-hidden border border-white/10 max-w-[120px]">
+                                        <img src={selectedProofs[w.id]} alt="Nouvel aperçu" className="max-h-20 object-contain" />
+                                        <button
+                                          type="button"
+                                          onClick={() => setSelectedProofs(prev => {
+                                            const copy = { ...prev };
+                                            delete copy[w.id];
+                                            return copy;
+                                          })}
+                                          className="absolute top-0.5 right-0.5 bg-rose-600 hover:bg-rose-700 text-white rounded-full p-0.5 text-[8px] leading-none transition"
+                                          title="Annuler"
+                                          id={`cancel-history-change-${w.id}`}
+                                        >
+                                          ❌
+                                        </button>
+                                      </div>
+                                      <button
+                                        type="button"
+                                        onClick={() => handleUserSubmitProof(w.id)}
+                                        disabled={uploadingProofId === w.id}
+                                        id={`confirm-history-change-btn-${w.id}`}
+                                        className="px-2.5 py-1 bg-[#22C55E] hover:bg-[#16a34a] text-black font-extrabold rounded text-[9px] uppercase tracking-wider font-mono transition"
+                                      >
+                                        {uploadingProofId === w.id ? "⌛..." : "✅ Enregistrer"}
+                                      </button>
+                                    </div>
+                                  ) : (
+                                    <div>
+                                      <input
+                                        type="file"
+                                        accept="image/*"
+                                        id={`user-proof-history-change-${w.id}`}
+                                        onChange={(e) => handleUserSelectProof(w.id, e)}
+                                        className="hidden"
+                                        disabled={uploadingProofId === w.id}
+                                      />
+                                      <label
+                                        htmlFor={`user-proof-history-change-${w.id}`}
+                                        className="inline-flex px-2.5 py-1 bg-white/5 border border-white/10 hover:border-emerald-500/30 text-slate-400 hover:text-[#22C55E] rounded-lg text-[9px] font-bold cursor-pointer transition font-mono items-center gap-1 justify-center whitespace-nowrap"
+                                      >
+                                        {uploadingProofId === w.id ? "⌛..." : "🔄 Changer ma Capture"}
+                                      </label>
+                                    </div>
+                                  )}
+                                </div>
+                              )}
+                            </div>
+                          ) : w.status === "approved" ? (
+                            <div className="mt-2 bg-emerald-500/5 border border-dashed border-emerald-500/20 rounded-xl p-3 text-center space-y-2 animate-pulse-subtle">
+                              <span className="text-[9.5px] text-[#D4AF37] font-bold uppercase block font-mono">
+                                📢 PUBLIER VOTRE CAPTURE DE RÉCEPTION
+                              </span>
+                              <p className="text-[9.5px] text-slate-300">
+                                Félicitations ! Votre retrait est payé. Veuillez sélectionner et publier la capture d'écran du reçu (MoMo) reçu pour valider publiquement votre gain.
+                              </p>
+
+                              {selectedProofs[w.id] ? (
+                                <div className="space-y-3 pt-1">
+                                  <div className="relative rounded-xl overflow-hidden border border-emerald-500/30 max-w-[200px] mx-auto bg-black/40">
+                                    <img src={selectedProofs[w.id]} alt="Aperçu" className="max-h-32 w-full object-contain mx-auto" />
+                                    <button
+                                      type="button"
+                                      onClick={() => setSelectedProofs(prev => {
+                                        const copy = { ...prev };
+                                        delete copy[w.id];
+                                        return copy;
+                                      })}
+                                      className="absolute top-1 right-1 bg-rose-600 hover:bg-rose-700 text-white rounded-full p-1 transition"
+                                      title="Annuler"
+                                      id={`cancel-history-proof-${w.id}`}
+                                    >
+                                      ❌
+                                    </button>
+                                  </div>
+                                  <button
+                                    type="button"
+                                    onClick={() => handleUserSubmitProof(w.id)}
+                                    disabled={uploadingProofId === w.id}
+                                    id={`submit-history-proof-btn-${w.id}`}
+                                    className="w-full px-4 py-2 bg-gradient-to-r from-emerald-500 to-teal-600 hover:from-emerald-600 hover:to-teal-700 text-black font-extrabold rounded-xl text-xs transition flex items-center justify-center gap-1.5 shadow-lg shadow-emerald-500/20 font-mono uppercase"
+                                  >
+                                    {uploadingProofId === w.id ? "⌛ Publication..." : "✅ Publier ma Capture"}
+                                  </button>
+                                </div>
+                              ) : (
+                                <div className="flex justify-center">
+                                  <input
+                                    type="file"
+                                    accept="image/*"
+                                    id={`user-proof-history-${w.id}`}
+                                    onChange={(e) => handleUserSelectProof(w.id, e)}
+                                    className="hidden"
+                                    disabled={uploadingProofId === w.id}
+                                  />
+                                  <label
+                                    htmlFor={`user-proof-history-${w.id}`}
+                                    className="px-3 py-1 bg-gradient-to-r from-emerald-500 to-teal-600 text-black font-extrabold rounded-lg text-[10px] cursor-pointer hover:from-emerald-600 transition flex items-center gap-1 font-mono uppercase"
+                                  >
+                                    📸 Sélectionner ma Capture
+                                  </label>
+                                </div>
+                              )}
+                            </div>
+                          ) : null}
                         </div>
                       ))}
                     </div>
