@@ -572,13 +572,13 @@ export default function DashboardView({ userId, onLogout, lang, onNavigate }: Da
         try {
           await purchaseProduct(userId, product.id);
           triggerAlert(
-            lang === "fr" ? "Succès de l'investissement 🎉" : "Activation Successful 🎉",
+            lang === "fr" ? "Achat réussi ! 🎉" : "Activation Successful 🎉",
             lang === "fr"
-              ? `Félicitations ! Le plan d'investissement "${product.name}" est maintenant actif. Vos gains quotidiens de +${product.dailyReturn} FCFA démarreront sous 24 heures.`
+              ? "Félicitations, votre achat est réussi ! Le plan est maintenant actif sur votre compte."
               : `Congratulations! Plan "${product.name}" is now active.`
           );
           loadProfile();
-          setActiveTab("home");
+          setActiveTab("profile");
         } catch (err: any) {
           triggerAlert(
             lang === "fr" ? "Erreur système" : "System Error",
@@ -1437,13 +1437,13 @@ export default function DashboardView({ userId, onLogout, lang, onNavigate }: Da
 
             {/* Chat View Support directly inside the container */}
             {activeSubView === "chat" && (
-              <div className="bg-[#091032] border border-white/5 rounded-2xl p-4 flex flex-col h-[400px] justify-between">
+              <div className="bg-white border border-slate-200 shadow-xl rounded-2xl p-4 flex flex-col h-[400px] justify-between text-slate-800">
                 <div>
-                  <div className="flex items-center gap-2 border-b border-white/10 pb-3">
+                  <div className="flex items-center gap-2 border-b border-slate-100 pb-3">
                     <MessageSquare className="w-5 h-5 text-amber-500" />
                     <div>
-                      <h2 className="text-xs font-bold uppercase font-mono text-white">Support Client iAgri</h2>
-                      <p className="text-[10px] text-gray-400">Temps de réponse moyen : &lt; 5 minutes</p>
+                      <h2 className="text-xs font-bold uppercase font-mono text-slate-800">Support Client iAgri</h2>
+                      <p className="text-[10px] text-slate-500">Temps de réponse moyen : &lt; 5 minutes</p>
                     </div>
                   </div>
                 </div>
@@ -1451,7 +1451,7 @@ export default function DashboardView({ userId, onLogout, lang, onNavigate }: Da
                 {/* Messages scroll pool */}
                 <div className="flex-1 overflow-y-auto py-3 space-y-3 px-2">
                   {chatMessages.length === 0 ? (
-                    <div className="text-center py-6 text-gray-500 text-xs text-light space-y-1">
+                    <div className="text-center py-6 text-slate-400 text-xs text-light space-y-1">
                       <p>Bonjour ! Posez votre question ici pour recevoir l'aide de notre service d'administration financière.</p>
                     </div>
                   ) : (
@@ -1460,10 +1460,10 @@ export default function DashboardView({ userId, onLogout, lang, onNavigate }: Da
                       return (
                         <div key={msg.id} className={`flex ${isAdmin ? 'justify-start' : 'justify-end'}`}>
                           <div className={`max-w-[80%] rounded-xl px-3 py-2 text-xs ${
-                            isAdmin ? 'bg-amber-500/10 text-white border border-amber-500/15' : 'bg-[#15256D] text-white'
+                            isAdmin ? 'bg-slate-100 text-slate-800 border border-slate-200' : 'bg-[#0052FF] text-white'
                           }`}>
                             <p className="leading-relaxed whitespace-pre-wrap">{msg.message}</p>
-                            <span className="block text-[8px] text-gray-400 mt-1 text-right font-mono">
+                            <span className={`block text-[8px] mt-1 text-right font-mono ${isAdmin ? 'text-slate-500' : 'text-blue-200'}`}>
                               {new Date(msg.date).toLocaleTimeString([], {hour: '2-digit', minute:'2-digit'})}
                             </span>
                           </div>
@@ -1473,13 +1473,13 @@ export default function DashboardView({ userId, onLogout, lang, onNavigate }: Da
                   )}
                 </div>
 
-                <form onSubmit={handleSendChatMsg} className="flex gap-2 pt-2 border-t border-white/10">
+                <form onSubmit={handleSendChatMsg} className="flex gap-2 pt-2 border-t border-slate-100">
                   <input
                     type="text"
                     placeholder="Écrivez votre message..."
                     value={chatInput}
                     onChange={(e) => setChatInput(e.target.value)}
-                    className="flex-grow bg-[#03061A] border border-white/10 rounded-xl px-3 py-2 text-xs focus:border-amber-500 outline-none"
+                    className="flex-grow bg-slate-50 border border-slate-200 text-slate-800 rounded-xl px-3 py-2 text-xs focus:border-amber-500 outline-none placeholder:text-slate-400"
                   />
                   <button
                     type="submit"
@@ -1886,12 +1886,16 @@ export default function DashboardView({ userId, onLogout, lang, onNavigate }: Da
                 ) : (
                   <div className="space-y-4 font-sans">
                     {productsList.map(prod => {
+                      const userBalance = profile?.balance ?? 0;
+                      const hasInsufficientBalance = !prod.isBlocked && userBalance < prod.price;
                       return (
                         <div 
                           key={prod.id} 
                           className={`bg-[#0A0E17] border rounded-[32px] p-6 relative overflow-hidden group transition duration-300 ${
                             prod.isBlocked 
                               ? "border-red-500/20 bg-gradient-to-b from-[#140a0c] to-[#0A0E17] opacity-95" 
+                              : hasInsufficientBalance
+                              ? "border-red-500/30 hover:border-red-500/60"
                               : "border-[#D4AF37]/20 hover:border-[#D4AF37] gold-glow"
                           }`}
                         >
@@ -1930,6 +1934,12 @@ export default function DashboardView({ userId, onLogout, lang, onNavigate }: Da
                               <span className="text-xl font-bold font-mono tracking-tight text-[#D4AF37]">{prod.price.toLocaleString()} FCFA</span>
                               <span className="text-[10px] text-slate-400 font-mono font-light">prix fixe de location</span>
                             </div>
+                            {hasInsufficientBalance && (
+                              <div className="text-[11px] font-semibold text-red-500 mt-1 flex items-center gap-1.5 font-sans">
+                                <span className="w-2 h-2 rounded-full bg-red-500 animate-ping inline-block shrink-0"></span>
+                                <span>Solde insuffisant (Mon solde: {userBalance.toLocaleString()} FCFA)</span>
+                              </div>
+                            )}
                           </div>
 
                           <div className="grid grid-cols-3 gap-2 py-4 border-y border-white/5 mt-4 text-xs font-mono text-slate-300">
@@ -2318,23 +2328,23 @@ export default function DashboardView({ userId, onLogout, lang, onNavigate }: Da
       {/* Floating Support Button ("Casque Bleue") */}
       <div className="fixed bottom-24 right-5 z-40 flex flex-col items-end">
         {supportPopupOpen && (
-          <div className="mb-3 w-72 bg-[#090E20]/95 backdrop-blur-md border border-blue-500/30 rounded-2xl p-4 shadow-2xl animate-fade-in text-white text-left font-sans relative">
-            <div className="absolute top-0 left-0 right-0 h-1 bg-blue-500 rounded-t-2xl"></div>
+          <div className="mb-3 w-72 bg-white border border-slate-200 rounded-2xl p-4 shadow-2xl animate-fade-in text-slate-800 text-left font-sans relative">
+            <div className="absolute top-0 left-0 right-0 h-1 bg-[#0052FF] rounded-t-2xl"></div>
             
             <div className="flex justify-between items-center mb-3">
               <div className="flex items-center gap-1.5 mt-1">
-                <Headphones className="w-4 h-4 text-blue-400" />
-                <span className="text-xs font-bold uppercase tracking-wider font-mono">Assistance iAgri</span>
+                <Headphones className="w-4 h-4 text-[#0052FF]" />
+                <span className="text-xs font-bold uppercase tracking-wider font-mono text-slate-800">Assistance iAgri</span>
               </div>
               <button 
                 onClick={() => setSupportPopupOpen(false)}
-                className="text-gray-400 hover:text-white text-xs font-bold px-1.5 py-0.5 rounded cursor-pointer"
+                className="text-slate-400 hover:text-slate-600 text-xs font-bold px-1.5 py-0.5 rounded cursor-pointer"
               >
                 ✕
               </button>
             </div>
 
-            <p className="text-[11px] text-gray-300 mb-3 leading-relaxed">
+            <p className="text-[11px] text-slate-600 mb-3 leading-relaxed">
               Rejoignez nos canaux officiels pour les nouveautés, codes cadeaux et l'aide de la communauté.
             </p>
 
@@ -2343,7 +2353,7 @@ export default function DashboardView({ userId, onLogout, lang, onNavigate }: Da
                 href={platformSettings.whatsappGroupLink} 
                 target="_blank" 
                 rel="noopener noreferrer"
-                className="flex items-center justify-between p-2.5 bg-emerald-600/20 hover:bg-emerald-600/35 border border-emerald-500/30 rounded-xl transition text-emerald-300 font-bold"
+                className="flex items-center justify-between p-2.5 bg-emerald-50 hover:bg-emerald-100 border border-emerald-200 rounded-xl transition text-emerald-700 font-bold"
               >
                 <span className="flex items-center gap-2">
                   <span className="w-2 h-2 rounded-full bg-emerald-500 animate-ping"></span>
@@ -2356,7 +2366,7 @@ export default function DashboardView({ userId, onLogout, lang, onNavigate }: Da
                 href={platformSettings.telegramChannelLink} 
                 target="_blank" 
                 rel="noopener noreferrer"
-                className="flex items-center justify-between p-2.5 bg-blue-600/20 hover:bg-blue-600/35 border border-blue-500/30 rounded-xl transition text-blue-300 font-bold"
+                className="flex items-center justify-between p-2.5 bg-blue-50 hover:bg-blue-100 border border-blue-200 rounded-xl transition text-blue-700 font-bold"
               >
                 <span className="flex items-center gap-2">
                   <span className="w-2 h-2 rounded-full bg-blue-400 animate-ping"></span>
@@ -2370,10 +2380,10 @@ export default function DashboardView({ userId, onLogout, lang, onNavigate }: Da
                   setActiveSubView("chat");
                   setSupportPopupOpen(false);
                 }}
-                className="w-full flex items-center justify-between p-2.5 bg-amber-500/10 hover:bg-amber-500/20 border border-amber-500/20 rounded-xl transition text-amber-400 font-bold cursor-pointer"
+                className="w-full flex items-center justify-between p-2.5 bg-amber-50 hover:bg-amber-100 border border-amber-200 rounded-xl transition text-amber-800 font-bold cursor-pointer"
               >
                 <span className="flex items-center gap-2">
-                  <MessageSquare className="w-3.5 h-3.5" />
+                  <MessageSquare className="w-3.5 h-3.5 text-amber-600" />
                   Chat de Support Direct
                 </span>
                 <ChevronRight className="w-3.5 h-3.5" />
@@ -2436,7 +2446,7 @@ export default function DashboardView({ userId, onLogout, lang, onNavigate }: Da
               {modalTitle}
             </h3>
             
-            <p className="text-sm text-slate-700 leading-relaxed font-sans font-medium mt-3 mb-6">
+            <p className="text-sm text-slate-700 leading-relaxed font-sans font-medium mt-3 mb-6 whitespace-pre-line">
               {modalMessage}
             </p>
             

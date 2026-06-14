@@ -398,10 +398,18 @@ async function startServer() {
           }
         }
 
+        // Merge products: trust Supabase if it has entries. If empty, seed from local.
+        let mergedProducts = [...supabaseDb.products];
+        if (mergedProducts.length === 0 && db.products.length > 0) {
+          mergedProducts = [...db.products];
+          draftMerged = true;
+        }
+
         // Assign merged state back
         db = {
           ...supabaseDb,
           users: mergedUsers,
+          products: mergedProducts,
           deposits: mergedDeposits,
           withdrawals: mergedWithdrawals,
           tickets: mergedTickets,
@@ -1720,6 +1728,7 @@ async function startServer() {
   });
 
   app.post("/api/admin/products", async (req, res) => {
+    await syncFromSupabase(true);
     const { name, price, dailyReturn, durationDays, badge, maxPurchaseCount } = req.body;
     if (!name || !price || !dailyReturn || !durationDays) {
       return res.status(400).json({ error: "Remplissez tous les détails du produit." });
@@ -1742,6 +1751,7 @@ async function startServer() {
   });
 
   app.delete("/api/admin/products/:productId", async (req, res) => {
+    await syncFromSupabase(true);
     const { productId } = req.params;
     db.products = db.products.filter(p => p.id !== productId);
     deleteProductFromSupabase(productId).catch(err => {
@@ -1752,6 +1762,7 @@ async function startServer() {
   });
 
   app.put("/api/admin/products/:productId", async (req, res) => {
+    await syncFromSupabase(true);
     const { productId } = req.params;
     const { name, price, dailyReturn, durationDays, badge, maxPurchaseCount } = req.body;
     
@@ -1780,6 +1791,7 @@ async function startServer() {
   });
 
   app.put("/api/admin/products/:productId/toggle-block", async (req, res) => {
+    await syncFromSupabase(true);
     const { productId } = req.params;
     const pIdx = db.products.findIndex(p => p.id === productId);
     if (pIdx === -1) {
