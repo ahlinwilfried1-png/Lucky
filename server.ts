@@ -318,16 +318,28 @@ async function startServer() {
     await saveDB(db);
   }
 
-  const syncFromSupabase = async () => {
+  let lastSyncTime = 0;
+  const SYNC_CACHE_MS = 2500; // Cache threshold to prevent dual-concurrency loads on Supabase
+
+  const syncFromSupabase = async (force = false) => {
+    const now = Date.now();
+    if (!force && now - lastSyncTime < SYNC_CACHE_MS) {
+      return; // Return cached state memory immediately to avoid heavy DB performance lockups
+    }
+
     try {
       const supabaseDb = await loadStateFromSupabase();
       if (supabaseDb) {
         isSupabaseHealthy = true;
+        lastSyncTime = now;
+        let draftMerged = false;
+
         // Merge users: keep any users from local db that aren't in Supabase, and update existing ones from Supabase
         const mergedUsers = [...supabaseDb.users];
         for (const localUser of db.users) {
           if (!mergedUsers.some(u => u.id === localUser.id)) {
             mergedUsers.push(localUser);
+            draftMerged = true;
           }
         }
 
@@ -336,6 +348,7 @@ async function startServer() {
         for (const localDep of db.deposits) {
           if (!mergedDeposits.some(d => d.id === localDep.id)) {
             mergedDeposits.push(localDep);
+            draftMerged = true;
           }
         }
 
@@ -344,6 +357,7 @@ async function startServer() {
         for (const localWit of db.withdrawals) {
           if (!mergedWithdrawals.some(w => w.id === localWit.id)) {
             mergedWithdrawals.push(localWit);
+            draftMerged = true;
           }
         }
 
@@ -352,6 +366,7 @@ async function startServer() {
         for (const localTicket of db.tickets) {
           if (!mergedTickets.some(t => t.id === localTicket.id)) {
             mergedTickets.push(localTicket);
+            draftMerged = true;
           }
         }
 
@@ -360,6 +375,7 @@ async function startServer() {
         for (const localInv of db.investments) {
           if (!mergedInvestments.some(i => i.id === localInv.id)) {
             mergedInvestments.push(localInv);
+            draftMerged = true;
           }
         }
 
@@ -368,6 +384,7 @@ async function startServer() {
         for (const localNot of db.notifications) {
           if (!mergedNotifications.some(n => n.id === localNot.id)) {
             mergedNotifications.push(localNot);
+            draftMerged = true;
           }
         }
 
@@ -376,6 +393,7 @@ async function startServer() {
         for (const localBonus of db.bonusCodes) {
           if (!mergedBonusCodes.some(b => b.code === localBonus.code)) {
             mergedBonusCodes.push(localBonus);
+            draftMerged = true;
           }
         }
 
@@ -394,6 +412,12 @@ async function startServer() {
         try {
           fs.writeFileSync(DB_FILE, JSON.stringify(db, null, 2), "utf-8");
         } catch (e) {}
+
+        // If local offline/cached records were merged, push them up to Supabase automatically to align databases
+        if (draftMerged) {
+          console.log("iAgri Sync: Merged local items detected. Pushing state back to Supabase...");
+          await saveStateToSupabase(db);
+        }
       } else {
         isSupabaseHealthy = false;
       }
@@ -1298,7 +1322,7 @@ async function startServer() {
     try {
       console.log("iAgri Admin: Manual synchronization initiated...");
       // 1. First run a regular pull/merge
-      await syncFromSupabase();
+      await syncFromSupabase(true);
       
       // 2. Perform a complete push back to Supabase to replicate all merged rows
       const syncResult = await saveStateToSupabase(db);

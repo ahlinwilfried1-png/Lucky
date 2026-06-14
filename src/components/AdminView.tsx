@@ -287,7 +287,8 @@ export default function AdminView({ adminUserId, onExit, lang }: AdminViewProps)
       reloadUsers();
       reloadDeposits();
       reloadWithdrawals();
-    }, 15000);
+      reloadChats();
+    }, 4000);
     return () => clearInterval(fallbackSyncInterval);
   }, []);
 
@@ -756,23 +757,40 @@ export default function AdminView({ adminUserId, onExit, lang }: AdminViewProps)
       
       {/* Admin header */}
       <header className="bg-[#1E293B] px-4 py-4 border-b border-red-500/25 sticky top-0 z-40 text-white shadow-md">
-        <div className="max-w-7xl mx-auto flex items-center justify-between">
+        <div className="max-w-7xl mx-auto flex flex-col sm:flex-row items-center justify-between gap-4">
           <div className="flex items-center gap-2">
             <div className="w-9 h-9 rounded-xl bg-red-600 flex items-center justify-center text-white font-mono font-bold shadow-md shadow-red-500/10">
               A
             </div>
             <div>
               <h1 className="text-sm font-bold font-mono tracking-wider text-red-500">INVESTA ADMIN PORTAL</h1>
-              <span className="text-[10px] text-gray-400 uppercase tracking-widest font-mono">Cockpit de surveillance ultra-sécurisé</span>
+              <span className="text-[10px] text-gray-400 uppercase tracking-widest font-mono">Cockpit de surveillance de synchronisation</span>
             </div>
           </div>
 
-          <button
-            onClick={onExit}
-            className="px-4 py-2 rounded-xl bg-white/10 hover:bg-white/20 text-xs border border-white/10 font-semibold cursor-pointer text-white"
-          >
-            Sortir du Panel Administrateur
-          </button>
+          <div className="flex items-center gap-2.5 w-full sm:w-auto justify-end">
+            <button
+              id="force_sync_header_btn"
+              onClick={handleForceSynchronize}
+              disabled={syncing}
+              className={`flex items-center gap-1.5 px-3 py-1.5 rounded-xl border text-xs font-mono font-bold transition duration-200 cursor-pointer disabled:opacity-50 ${
+                stats.supabaseHealthy === false
+                  ? "bg-amber-600 border-amber-500 text-white hover:bg-amber-500"
+                  : "bg-emerald-600/20 border-emerald-500/30 text-emerald-400 hover:bg-[#D4AF37]/20 hover:text-white"
+              }`}
+              title="Synchroniser immédiatement tous les comptes d'utilisateurs, dépôts et retraits avec Supabase Cloud"
+            >
+              <RefreshCw className={`w-3.5 h-3.5 ${syncing ? 'animate-spin' : ''}`} />
+              <span>{syncing ? "Sync..." : "SYNCHRONISER 🔄"}</span>
+            </button>
+
+            <button
+              onClick={onExit}
+              className="px-4 py-2 rounded-xl bg-white/10 hover:bg-white/20 text-xs border border-white/10 font-semibold cursor-pointer text-white shrink-0"
+            >
+              Sortir du Panel
+            </button>
+          </div>
         </div>
       </header>
 
@@ -903,7 +921,7 @@ export default function AdminView({ adminUserId, onExit, lang }: AdminViewProps)
               </button>
             </div>
             
-            {stats.supabaseHealthy === false && (
+            {stats.supabaseHealthy === false ? (
               <div className="bg-amber-500/10 border border-amber-500/20 rounded-2xl p-5 space-y-3">
                 <div className="flex items-start gap-3">
                   <span className="text-2xl shrink-0">⚠️</span>
@@ -918,6 +936,23 @@ export default function AdminView({ adminUserId, onExit, lang }: AdminViewProps)
                       Pour activer la synchronisation globale, veuillez copier le contenu du fichier <code className="bg-slate-800 text-amber-400 px-1 py-0.5 rounded text-[10px] font-mono">supabase_schema.sql</code> (situé à la racine de votre projet) et l'exécuter dans l'éditeur de requêtes SQL (<span className="underline font-sans">SQL Editor</span>) de votre tableau de bord Supabase.
                     </p>
                   </div>
+                </div>
+              </div>
+            ) : (
+              <div className="bg-emerald-500/5 border border-emerald-500/20 rounded-2xl p-4 flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
+                <div className="flex items-center gap-3">
+                  <div className="w-2.5 h-2.5 rounded-full bg-emerald-500 animate-pulse shrink-0" />
+                  <div>
+                    <h3 className="text-xs font-bold text-emerald-600 uppercase font-mono flex items-center gap-1.5">
+                      ✓ SYNCHRONISATION AUTOMATIQUE SUPABASE AVEC RAFRAÎCHISSEMENT ULTRA-RAPIDE (4s)
+                    </h3>
+                    <p className="text-[11px] text-slate-500">
+                      Vos comptes d'inscriptions, transactions de dépôts Mobile Money, et demandes de retraits sont synchronisés et actualisés automatiquement toutes les 4 secondes avec le stockage cloud permanent de Supabase. Aucun besoin de rafraîchir manuellement la page.
+                    </p>
+                  </div>
+                </div>
+                <div className="text-[10px] bg-emerald-500/10 text-emerald-600 px-3 py-1 rounded-full font-mono font-bold border border-emerald-500/10 uppercase shrink-0">
+                  STATUT : SYNCHRONISÉ ✓
                 </div>
               </div>
             )}
