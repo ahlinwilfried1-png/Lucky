@@ -8,6 +8,7 @@ import LoginView from "./components/LoginView";
 import RegisterView from "./components/RegisterView";
 import DashboardView from "./components/DashboardView";
 import AdminView from "./components/AdminView";
+import { syncOfflineLocalData } from "./api";
 
 export default function App() {
   // Navigation states: "home" | "login" | "register" | "dashboard" | "admin"
@@ -57,6 +58,11 @@ export default function App() {
     } catch (e) {
       console.warn("Could not retrieve standard user sessions from memory.", e);
     }
+
+    // Trigger auto synchronization of offline accounts from other devices
+    try {
+      syncOfflineLocalData();
+    } catch (e) {}
   }, []);
 
   const handleLoginSuccess = (userData: { id: string; name: string; whatsapp: string; country: string; isAdmin: boolean }) => {

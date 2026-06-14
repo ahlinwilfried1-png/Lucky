@@ -171,3 +171,31 @@ nav.fixed button[class*="text-amber-500"],
 .w-9.h-9.rounded-xl.bg-white svg {
   color: #0066FF !important;
 }
+
+/* Ensure the live activity motivation toast has pristine, high-contrast, fully readable text */
+.motivation-toast {
+  background-color: #090D1A !important;
+  border: 1px solid rgba(255, 255, 255, 0.12) !important;
+  box-shadow: 0 12px 40px rgba(0, 0, 0, 0.6) !important;
+  border-radius: 20px !important;
+}
+
+.motivation-toast-title {
+  color: #FBBF24 !important; /* Bright high-contrast gold for highlight */
+  font-weight: 800 !important;
+  font-family: monospace !important;
+  text-transform: uppercase !important;
+}
+
+.motivation-toast-time {
+  color: #94A3B8 !important; /* Light Slate of high contrast */
+  font-family: monospace !important;
+  font-weight: 500 !important;
+  text-transform: uppercase !important;
+}
+
+.motivation-toast-desc {
+  color: #FFFFFF !important; /* Pure, crisp white for full legibility */
+  font-weight: 600 !important;
+}
+

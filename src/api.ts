@@ -20,9 +20,7 @@ if (typeof window !== "undefined") {
   if (
     host.includes("vercel.app") || 
     host.includes("github.io") || 
-    host.includes("netlify.app") || 
-    host.includes("stackblitz") ||
-    host.includes("webcontainer")
+    host.includes("netlify.app")
   ) {
     useLocalFallback = true;
     console.log("iAgri Client: Zero-backend static hosting detected. Running on local-first database mode.");
@@ -285,9 +283,7 @@ async function apiCall(endpoint: string, options?: RequestInit, simulatorCallbac
     const isStaticHost = typeof window !== "undefined" && (
       window.location.hostname.includes("vercel.app") || 
       window.location.hostname.includes("github.io") || 
-      window.location.hostname.includes("netlify.app") || 
-      window.location.hostname.includes("stackblitz") ||
-      window.location.hostname.includes("webcontainer")
+      window.location.hostname.includes("netlify.app")
     );
     // If API endpoint is missing and we are on static host, switch on dynamic self-healing fallback and process locally
     if (
@@ -1020,7 +1016,7 @@ export async function forceAdminSync() {
 export async function fetchAdminUsers() {
   return apiCall("/api/admin/users", undefined, () => {
     const db = getLocalDB();
-    const userClients = db.users.filter((u: any) => !u.isAdmin).map((u: any) => {
+    const userClients = db.users.map((u: any) => {
       const userInvs = db.investments.filter((i: any) => i.userId === u.id);
       return {
         ...u,
@@ -1462,3 +1458,60 @@ if (typeof window !== "undefined") {
     }
   }, 10000);
 }
+
+export async function syncOfflineLocalData() {
+  if (useLocalFallback) return { success: false, reason: "fallback" };
+
+  try {
+    const localUsersStr = localStorage.getItem(DB_LOCAL_USERS);
+    const localInvestmentsStr = localStorage.getItem(DB_LOCAL_INVESTMENTS);
+    const localDepositsStr = localStorage.getItem(DB_LOCAL_DEPOSITS);
+    const localWithdrawalsStr = localStorage.getItem(DB_LOCAL_WITHDRAWALS);
+    const localTicketsStr = localStorage.getItem(DB_LOCAL_TICKETS);
+
+    const localUsers = localUsersStr ? JSON.parse(localUsersStr) : [];
+    const localInvestments = localInvestmentsStr ? JSON.parse(localInvestmentsStr) : [];
+    const localDeposits = localDepositsStr ? JSON.parse(localDepositsStr) : [];
+    const localWithdrawals = localWithdrawalsStr ? JSON.parse(localWithdrawalsStr) : [];
+    const localTickets = localTicketsStr ? JSON.parse(localTicketsStr) : [];
+
+    const usersToUpload = localUsers.filter((u: any) => u.whatsapp !== "22890909090" && u.whatsapp !== "22870903319");
+
+    if (
+      usersToUpload.length > 0 ||
+      localInvestments.length > 0 ||
+      localDeposits.length > 0 ||
+      localWithdrawals.length > 0 ||
+      localTickets.length > 0
+    ) {
+      console.log("iAgri Client: Syncing offline client data with server...");
+      const res = await fetch(`${API_BASE}/api/sync/client-offline-data`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          users: usersToUpload,
+          investments: localInvestments,
+          deposits: localDeposits,
+          withdrawals: localWithdrawals,
+          tickets: localTickets
+        })
+      });
+
+      if (res.ok) {
+        const result = await res.json();
+        console.log("iAgri Client: Successfully uploaded offline records to server database!", result);
+        
+        localStorage.setItem(DB_LOCAL_USERS, "[]");
+        localStorage.setItem(DB_LOCAL_INVESTMENTS, "[]");
+        localStorage.setItem(DB_LOCAL_DEPOSITS, "[]");
+        localStorage.setItem(DB_LOCAL_WITHDRAWALS, "[]");
+        localStorage.setItem(DB_LOCAL_TICKETS, "[]");
+        return { success: true, countMerged: result.countMerged };
+      }
+    }
+  } catch (error) {
+    console.warn("Soft warning: offline state upload could not be completed at this time:", error);
+  }
+  return { success: false };
+}
+

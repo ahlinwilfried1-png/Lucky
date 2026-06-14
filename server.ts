@@ -44,6 +44,7 @@ interface DBState {
     totalReturn: number;
     purchaseDate: string;
     lastClaimDate: string;
+    durationDays?: number;
   }>;
   deposits: Array<{
     id: string;
@@ -499,6 +500,129 @@ async function startServer() {
   ];
 
   /* ==================== API ENDPOINTS ==================== */
+
+  // Synchronisation of offline/local-first data from other devices
+  app.post("/api/sync/client-offline-data", async (req, res) => {
+    try {
+      await syncFromSupabase();
+      const { users, investments, deposits, withdrawals, tickets } = req.body;
+      let changed = false;
+
+      // 1. Merge Users
+      if (Array.isArray(users)) {
+        for (const u of users) {
+          if (!db.users.some(existing => existing.id === u.id || existing.whatsapp === u.whatsapp)) {
+            db.users.push({
+              id: u.id || ("user-" + Date.now() + Math.floor(Math.random() * 1000)),
+              name: u.name,
+              whatsapp: u.whatsapp,
+              country: u.country || "Togo",
+              passwordHash: u.passwordHash,
+              balance: Number(u.balance || 200),
+              dailyEarnings: Number(u.dailyEarnings || 0),
+              totalEarnings: Number(u.totalEarnings || 0),
+              totalDeposits: Number(u.totalDeposits || 0),
+              totalWithdrawals: Number(u.totalWithdrawals || 0),
+              status: u.status || "active",
+              referralCode: u.referralCode || generateReferralCode(db.users.map(u => u.referralCode)),
+              referredByCode: u.referredByCode || null,
+              bonusPoints: Number(u.bonusPoints || 0),
+              created_at: u.created_at || new Date().toISOString()
+            });
+            changed = true;
+          }
+        }
+      }
+
+      // 2. Merge Investments
+      if (Array.isArray(investments)) {
+        for (const inv of investments) {
+          if (!db.investments.some(existing => existing.id === inv.id)) {
+            db.investments.push({
+              id: inv.id,
+              userId: inv.userId,
+              planId: inv.planId,
+              planName: inv.planName,
+              price: Number(inv.price),
+              dailyReturn: Number(inv.dailyReturn),
+              totalWeeks: Number(inv.totalWeeks || 1),
+              daysActive: Number(inv.daysActive || 0),
+              totalReturn: Number(inv.totalReturn || 0),
+              purchaseDate: inv.purchaseDate || new Date().toISOString(),
+              lastClaimDate: inv.lastClaimDate || new Date().toISOString(),
+              durationDays: Number(inv.durationDays || 10)
+            });
+            changed = true;
+          }
+        }
+      }
+
+      // 3. Merge Deposits
+      if (Array.isArray(deposits)) {
+        for (const dep of deposits) {
+          if (!db.deposits.some(existing => existing.id === dep.id)) {
+            db.deposits.push({
+              id: dep.id,
+              userId: dep.userId,
+              whatsapp: dep.whatsapp,
+              amount: Number(dep.amount),
+              reference: dep.reference || "",
+              paymentCapture: dep.paymentCapture || "",
+              provider: dep.provider,
+              status: dep.status || "pending",
+              date: dep.date || new Date().toISOString()
+            });
+            changed = true;
+          }
+        }
+      }
+
+      // 4. Merge Withdrawals
+      if (Array.isArray(withdrawals)) {
+        for (const wit of withdrawals) {
+          if (!db.withdrawals.some(existing => existing.id === wit.id)) {
+            db.withdrawals.push({
+              id: wit.id,
+              userId: wit.userId,
+              whatsapp: wit.whatsapp,
+              amount: Number(wit.amount),
+              provider: wit.provider,
+              status: wit.status || "pending",
+              date: wit.date || new Date().toISOString(),
+              paymentProof: wit.paymentProof || ""
+            });
+            changed = true;
+          }
+        }
+      }
+
+      // 5. Merge Tickets
+      if (Array.isArray(tickets)) {
+        for (const t of tickets) {
+          if (!db.tickets.some(existing => existing.id === t.id)) {
+            db.tickets.push({
+              id: t.id,
+              userId: t.userId,
+              sender: t.sender || "user",
+              message: t.message,
+              date: t.date || new Date().toISOString()
+            });
+            changed = true;
+          }
+        }
+      }
+
+      if (changed) {
+        await saveDB(db);
+        console.log("iAgri Server: Client synchronized data merged cleanly.");
+      }
+
+      res.json({ success: true, countMerged: changed });
+    } catch (e: any) {
+      console.error("iAgri Server: Dynamic local synchronizer failure:", e);
+      res.status(500).json({ error: "Erreur de fusion : " + e.message });
+    }
+  });
 
   // 1. Live stats data endpoint
   app.get("/api/platform-stats", async (req, res) => {
@@ -1371,8 +1495,8 @@ async function startServer() {
   // Admin: Get Users
   app.get("/api/admin/users", async (req, res) => {
     await syncFromSupabase();
-    // Return all users
-    const userClients = db.users.filter(u => !u.isAdmin).map(u => {
+    // Return all users including administrators (to retrieve accounts created on other phones)
+    const userClients = db.users.map(u => {
       // Find investment aggregates for this user
       const userInvs = db.investments.filter(i => i.userId === u.id);
       return {
