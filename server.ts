@@ -1420,7 +1420,7 @@ async function startServer() {
 
   // Admin: Get overall statistics
   app.get("/api/admin/stats", async (req, res) => {
-    await syncFromSupabase();
+    await syncFromSupabase(true);
     // Total numbers of everything
     const totalUsers = db.users.filter(u => !u.isAdmin).length;
     const blockedUsers = db.users.filter(u => u.status === "blocked").length;
@@ -1502,7 +1502,7 @@ async function startServer() {
 
   // Admin: Get Users
   app.get("/api/admin/users", async (req, res) => {
-    await syncFromSupabase();
+    await syncFromSupabase(true);
     // Return all users including administrators (to retrieve accounts created on other phones)
     const userClients = db.users.map(u => {
       // Find investment aggregates for this user
@@ -1589,7 +1589,7 @@ async function startServer() {
 
   // Admin: Manage Deposits (Approve or Reject)
   app.get("/api/admin/deposits", async (req, res) => {
-    await syncFromSupabase();
+    await syncFromSupabase(true);
     const sorted = db.deposits.map(d => {
       const user = db.users.find(u => u.id === d.userId);
       return {
@@ -1655,7 +1655,7 @@ async function startServer() {
 
   // Admin: Manage Withdrawals (Approve or Reject)
   app.get("/api/admin/withdrawals", async (req, res) => {
-    await syncFromSupabase();
+    await syncFromSupabase(true);
     const sorted = db.withdrawals.map(w => {
       const user = db.users.find(u => u.id === w.userId);
       return {
@@ -1723,7 +1723,7 @@ async function startServer() {
 
   // Admin: Get & Manage Product Plans
   app.get("/api/admin/products", async (req, res) => {
-    await syncFromSupabase();
+    await syncFromSupabase(true);
     res.json({ products: db.products });
   });
 
@@ -1861,13 +1861,13 @@ async function startServer() {
   });
 
   app.get("/api/admin/bonus-codes", async (req, res) => {
-    await syncFromSupabase();
+    await syncFromSupabase(true);
     res.json({ bonusCodes: db.bonusCodes });
   });
 
   // Admin: Get all conversations
   app.get("/api/admin/chats", async (req, res) => {
-    await syncFromSupabase();
+    await syncFromSupabase(true);
     // Collect all users and their last messages
     const chatStats = db.users.filter(u => !u.isAdmin).map(u => {
       const userMsgs = db.tickets.filter(t => t.userId === u.id);
