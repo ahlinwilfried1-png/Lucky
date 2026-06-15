@@ -290,18 +290,29 @@ async function apiCall(endpoint: string, options?: RequestInit, simulatorCallbac
                            error.message?.includes("network error") || 
                            (typeof navigator !== "undefined" && !navigator.onLine);
 
-    // If API endpoint is missing and we are on static host, OR if we encountered a genuine network/offline error on any host,
-    // switch on dynamic self-healing fallback and process locally
+    // If API endpoint is missing and we are on static host, OR if we encountered a genuine network/offline error on static host
     if (
-      (isStaticHost && (error.message === "API_NOT_FOUND" || error.message?.includes("Unexpected token"))) || 
-      isNetworkError
+      isStaticHost && (
+        error.message === "API_NOT_FOUND" || 
+        error.message?.includes("Unexpected token") || 
+        isNetworkError
+      )
     ) {
-      console.warn(`Redirecting routing of ${endpoint} to client browser LocalDatabase due to offline state/static deployment...`);
+      console.warn(`Redirecting routing of ${endpoint} to client browser LocalDatabase permanently due to static deployment...`);
       useLocalFallback = true;
       if (simulatorCallback) {
         return Promise.resolve(simulatorCallback());
       }
     }
+
+    // If we are on full-stack/Cloud Run but the device itself is temporarily offline, serve offline simulator data temporarily,
+    // but DO NOT toggle useLocalFallback to true permanently!
+    const isOfflineState = typeof navigator !== "undefined" && !navigator.onLine;
+    if (isOfflineState && simulatorCallback) {
+      console.warn(`Device is offline. Serving local browser state temporarily for ${endpoint}...`);
+      return Promise.resolve(simulatorCallback());
+    }
+
     throw error;
   }
 }
