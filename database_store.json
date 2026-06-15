@@ -6,7 +6,7 @@
       "whatsapp": "22890909090",
       "country": "Togo",
       "passwordHash": "AdminTogo2026*",
-      "balance": 999000,
+      "balance": 799000,
       "dailyEarnings": 0,
       "totalEarnings": 0,
       "totalDeposits": 1000000,
@@ -79,6 +79,28 @@
   ],
   "products": [
     {
+      "id": "vip-4",
+      "name": "VIP Diamond - Leader",
+      "price": 50000,
+      "dailyReturn": 14000,
+      "durationDays": 10,
+      "totalReturn": 140000,
+      "badge": "Offre VIP",
+      "maxPurchaseCount": 2,
+      "isBlocked": false
+    },
+    {
+      "id": "vip-5",
+      "name": "VIP Ultimate - Prestige",
+      "price": 100000,
+      "dailyReturn": 30000,
+      "durationDays": 10,
+      "totalReturn": 300000,
+      "badge": "Prestige",
+      "maxPurchaseCount": 1,
+      "isBlocked": false
+    },
+    {
       "id": "vip-1",
       "name": "VIP Bronze - Standard",
       "price": 3000,
@@ -110,31 +132,52 @@
       "badge": "Rendement Élevé",
       "maxPurchaseCount": 2,
       "isBlocked": false
-    },
-    {
-      "id": "vip-4",
-      "name": "VIP Diamond - Leader",
-      "price": 50000,
-      "dailyReturn": 14000,
-      "durationDays": 10,
-      "totalReturn": 140000,
-      "badge": "Offre VIP",
-      "maxPurchaseCount": 2,
-      "isBlocked": false
-    },
-    {
-      "id": "vip-5",
-      "name": "VIP Ultimate - Prestige",
-      "price": 100000,
-      "dailyReturn": 30000,
-      "durationDays": 10,
-      "totalReturn": 300000,
-      "badge": "Prestige",
-      "maxPurchaseCount": 1,
-      "isBlocked": false
     }
   ],
-  "investments": [],
+  "investments": [
+    {
+      "id": "inv-1781479822856bxhr",
+      "userId": "admin-master",
+      "planId": "vip-5",
+      "planName": "VIP Ultimate - Prestige",
+      "price": 100000,
+      "dailyReturn": 30000,
+      "totalWeeks": 2,
+      "daysActive": 0,
+      "totalReturn": 300000,
+      "purchaseDate": "2026-06-14T23:30:22.856+00:00",
+      "lastClaimDate": "2026-06-14T23:30:22.856+00:00",
+      "durationDays": 10
+    },
+    {
+      "id": "inv-1781479956517ibp8",
+      "userId": "admin-master",
+      "planId": "vip-4",
+      "planName": "VIP Diamond - Leader",
+      "price": 50000,
+      "dailyReturn": 14000,
+      "totalWeeks": 2,
+      "daysActive": 0,
+      "totalReturn": 140000,
+      "purchaseDate": "2026-06-14T23:32:36.517+00:00",
+      "lastClaimDate": "2026-06-14T23:32:36.517+00:00",
+      "durationDays": 10
+    },
+    {
+      "id": "inv-1781480196151qen7",
+      "userId": "admin-master",
+      "planId": "vip-4",
+      "planName": "VIP Diamond - Leader",
+      "price": 50000,
+      "dailyReturn": 14000,
+      "totalWeeks": 2,
+      "daysActive": 0,
+      "totalReturn": 140000,
+      "purchaseDate": "2026-06-14T23:36:36.151+00:00",
+      "lastClaimDate": "2026-06-14T23:36:36.151+00:00",
+      "durationDays": 10
+    }
+  ],
   "deposits": [],
   "withdrawals": [],
   "referralCommissions": [],
@@ -146,7 +189,39 @@
       "title": "Retrait envoyé ! 💸",
       "message": "Votre demande de retrait de 1000 FCFA a été approuvée et transférée sur votre compte Mobile Money.",
       "date": "2026-06-14T14:00:01.157+00:00",
-      "readBy": []
+      "readBy": [
+        "admin-master"
+      ]
+    },
+    {
+      "id": "notif-inv-welcome-1781480196151",
+      "userId": "admin-master",
+      "title": "Plan VIP Diamond - Leader Activé !",
+      "message": "Votre investissement de 50000 FCFA a été activé avec succès. Vous recevrez 14000 FCFA chaque jour pendant 10 jours.",
+      "date": "2026-06-14T23:36:36.151+00:00",
+      "readBy": [
+        "admin-master"
+      ]
+    },
+    {
+      "id": "notif-inv-welcome-1781479822856",
+      "userId": "admin-master",
+      "title": "Plan VIP Ultimate - Prestige Activé !",
+      "message": "Votre investissement de 100000 FCFA a été activé avec succès. Vous recevrez 30000 FCFA chaque jour pendant 10 jours.",
+      "date": "2026-06-14T23:30:22.856+00:00",
+      "readBy": [
+        "admin-master"
+      ]
+    },
+    {
+      "id": "notif-inv-welcome-1781479956517",
+      "userId": "admin-master",
+      "title": "Plan VIP Diamond - Leader Activé !",
+      "message": "Votre investissement de 50000 FCFA a été activé avec succès. Vous recevrez 14000 FCFA chaque jour pendant 10 jours.",
+      "date": "2026-06-14T23:32:36.517+00:00",
+      "readBy": [
+        "admin-master"
+      ]
     },
     {
       "id": "notif-welcome-user-1781441424340",
@@ -170,7 +245,9 @@
       "title": "Retrait en cours",
       "message": "Votre demande de retrait de 1000 FCFA sur le numéro +2285677888 est reçue. Notre administration traite les retraits dans un délai de 2 à 24 heures.",
       "date": "2026-06-14T13:59:33.629+00:00",
-      "readBy": []
+      "readBy": [
+        "admin-master"
+      ]
     }
   ],
   "bonusCodes": [],

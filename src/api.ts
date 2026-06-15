@@ -285,15 +285,18 @@ async function apiCall(endpoint: string, options?: RequestInit, simulatorCallbac
       window.location.hostname.includes("github.io") || 
       window.location.hostname.includes("netlify.app")
     );
-    // If API endpoint is missing and we are on static host, switch on dynamic self-healing fallback and process locally
+    const isNetworkError = error.name === "TypeError" || 
+                           error.message?.includes("Failed to fetch") || 
+                           error.message?.includes("network error") || 
+                           (typeof navigator !== "undefined" && !navigator.onLine);
+
+    // If API endpoint is missing and we are on static host, OR if we encountered a genuine network/offline error on any host,
+    // switch on dynamic self-healing fallback and process locally
     if (
-      isStaticHost && (
-        error.message === "API_NOT_FOUND" || 
-        error.message.includes("Unexpected token") || 
-        error.name === "TypeError"
-      )
+      (isStaticHost && (error.message === "API_NOT_FOUND" || error.message?.includes("Unexpected token"))) || 
+      isNetworkError
     ) {
-      console.warn(`Redirecting routing of ${endpoint} to client browser LocalDatabase...`);
+      console.warn(`Redirecting routing of ${endpoint} to client browser LocalDatabase due to offline state/static deployment...`);
       useLocalFallback = true;
       if (simulatorCallback) {
         return Promise.resolve(simulatorCallback());
@@ -1460,7 +1463,17 @@ if (typeof window !== "undefined") {
 }
 
 export async function syncOfflineLocalData() {
-  if (useLocalFallback) return { success: false, reason: "fallback" };
+  if (useLocalFallback) {
+    // Only skip synchronization if we are strictly hosted on a static host (GitHub pages, Vercel, Netlify)
+    const isStaticHost = typeof window !== "undefined" && (
+      window.location.hostname.includes("vercel.app") || 
+      window.location.hostname.includes("github.io") || 
+      window.location.hostname.includes("netlify.app")
+    );
+    if (isStaticHost) {
+      return { success: false, reason: "fallback" };
+    }
+  }
 
   try {
     const localUsersStr = localStorage.getItem(DB_LOCAL_USERS);
@@ -1500,6 +1513,9 @@ export async function syncOfflineLocalData() {
       if (res.ok) {
         const result = await res.json();
         console.log("iAgri Client: Successfully uploaded offline records to server database!", result);
+        
+        // Restore direct server communication if we successfully reconnected
+        useLocalFallback = false;
         
         localStorage.setItem(DB_LOCAL_USERS, "[]");
         localStorage.setItem(DB_LOCAL_INVESTMENTS, "[]");
