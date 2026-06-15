@@ -1,0 +1,55 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512" width="100%" height="100%">
+  <!-- Smooth dark background with rounded corners (squircle shape) -->
+  <rect x="0" y="0" width="512" height="512" rx="128" fill="#0b1329"/>
+  
+  <!-- Subtle circular grid light effects -->
+  <circle cx="256" cy="256" r="200" fill="none" stroke="#1e293b" stroke-width="4" stroke-dasharray="8 8" opacity="0.6"/>
+  <circle cx="256" cy="256" r="160" fill="none" stroke="#10b981" stroke-width="1.5" stroke-dasharray="4 4" opacity="0.4"/>
+  
+  <!-- Radial Glow behind the leaf -->
+  <defs>
+    <radialGradient id="glow" cx="50%" cy="50%" r="50%" fx="50%" fy="50%">
+      <stop offset="0%" stop-color="#10b981" stop-opacity="0.25"/>
+      <stop offset="100%" stop-color="#10b981" stop-opacity="0"/>
+    </radialGradient>
+    <linearGradient id="leafGrad" x1="0%" y1="100%" x2="100%" y2="0%">
+      <stop offset="0%" stop-color="#059669"/>
+      <stop offset="60%" stop-color="#10b981"/>
+      <stop offset="100%" stop-color="#34d399"/>
+    </linearGradient>
+    <linearGradient id="goldGrad" x1="0%" y1="100%" x2="100%" y2="0%">
+      <stop offset="0%" stop-color="#d97706"/>
+      <stop offset="50%" stop-color="#fbbf24"/>
+      <stop offset="100%" stop-color="#fef08a"/>
+    </linearGradient>
+    <linearGradient id="ringGrad" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" stop-color="#34d399" stop-opacity="0.8"/>
+      <stop offset="100%" stop-color="#fbbf24" stop-opacity="0.2"/>
+    </linearGradient>
+  </defs>
+  
+  <!-- Glow Layer -->
+  <circle cx="256" cy="256" r="180" fill="url(#glow)"/>
+
+  <!-- Orbital Ring -->
+  <circle cx="256" cy="256" r="130" fill="none" stroke="url(#ringGrad)" stroke-width="8" stroke-linecap="round" stroke-dasharray="320 280"/>
+
+  <g transform="translate(0, 5)">
+    <!-- Soil/Base Accent -->
+    <path d="M 180,360 C 230,375 282,375 332,360 C 310,345 202,345 180,360 Z" fill="#1e293b" opacity="0.8"/>
+    
+    <!-- Left Leaf - Golden Profit/Growth Leaf -->
+    <path d="M 256,340 C 200,300 180,240 210,180 C 240,195 250,230 256,260 C 262,230 272,195 302,180 C 332,240 312,300 256,340 Z" fill="url(#leafGrad)"/>
+    
+    <!-- Central Sprout - Pure Gold Growth Stem & Leaf -->
+    <path d="M 256,340 C 230,290 235,220 256,150 C 277,220 282,290 256,340 Z" fill="url(#goldGrad)"/>
+    
+    <!-- Elegant center line for the main sprout -->
+    <path d="M 256,340 L 256,160" stroke="#78350f" stroke-width="3" stroke-linecap="round" opacity="0.3"/>
+  </g>
+  
+  <!-- Mini sparkling success stars/coins -->
+  <circle cx="360" cy="190" r="10" fill="url(#goldGrad)"/>
+  <polygon points="170,220 174,228 182,230 174,232 170,240 166,232 158,230 166,228" fill="url(#goldGrad)"/>
+  <polygon points="320,320 323,325 328,326 323,327 320,332 317,327 312,326 317,325" fill="url(#goldGrad)"/>
+</svg>

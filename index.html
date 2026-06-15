@@ -1,11 +1,36 @@
 <!doctype html>
-<html lang="en">
+<html lang="fr">
   <head>
     <meta charset="UTF-8" />
-    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <title>My Google AI Studio App</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover" />
+    <title>iAgri - Plateforme d'Investissement Moderne</title>
+    
+    <!-- PWA Meta Meta Tags -->
+    <link rel="manifest" href="/manifest.json" />
+    <meta name="theme-color" content="#0b1329" />
+    <meta name="apple-mobile-web-app-capable" content="yes" />
+    <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
+    <meta name="apple-mobile-web-app-title" content="iAgri" />
+    <link rel="apple-touch-icon" href="/icon.svg" />
+    <link rel="icon" type="image/svg+xml" href="/icon.svg" />
+    
+    <!-- Service Worker Registration -->
+    <script>
+      if ('serviceWorker' in navigator) {
+        window.addEventListener('load', () => {
+          navigator.onLine ? console.log('Online!') : console.log('Offline!');
+          navigator.serviceWorker.register('/sw.js')
+            .then((registration) => {
+              console.log('iAgri SW Registered with scope:', registration.scope);
+            })
+            .catch((error) => {
+              console.error('iAgri SW Registration failed:', error);
+            });
+        });
+      }
+    </script>
   </head>
-  <body>
+  <body class="bg-[#0b1329] text-slate-100 select-none antialiased overflow-x-hidden">
     <div id="root"></div>
     <script type="module" src="/src/main.tsx"></script>
   </body>

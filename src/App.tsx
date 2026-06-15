@@ -8,6 +8,7 @@ import LoginView from "./components/LoginView";
 import RegisterView from "./components/RegisterView";
 import DashboardView from "./components/DashboardView";
 import AdminView from "./components/AdminView";
+import PWAInstallPrompt from "./components/PWAInstallPrompt";
 import { syncOfflineLocalData } from "./api";
 
 export default function App() {
@@ -122,6 +123,8 @@ export default function App() {
           lang={lang} 
         />
       )}
+
+      <PWAInstallPrompt lang={lang} />
 
     </div>
   );

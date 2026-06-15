@@ -90,7 +90,7 @@ export default function RegisterView({ onNavigate, lang }: RegisterViewProps) {
       // Clear the temporary stored registration referral code on success
       localStorage.removeItem("pending_referral_code");
 
-      setSuccess(lang === "fr" ? "Votre compte d'investisseur a été créé avec succès ! Connectez-vous." : "Success! Account registered. Redirecting to login...");
+      setSuccess(lang === "fr" ? "Inscription réussie ! Votre compte d'investisseur a été créé avec succès." : "Registration successful! Account registered. Redirecting to login...");
 
       setTimeout(() => {
         onNavigate("login");

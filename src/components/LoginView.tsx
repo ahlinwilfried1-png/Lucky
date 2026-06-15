@@ -43,7 +43,7 @@ export default function LoginView({ onNavigate, onLoginSuccess, lang }: LoginVie
     setLoading(true);
     try {
       const response = await loginUser({ whatsapp: formattedPhone, password });
-      setSuccess(lang === "fr" ? "Authentification réussie ! Initialisation de l'espace investisseur..." : "Authentication successful! Initializing secure investor dashboard...");
+      setSuccess(lang === "fr" ? "Connexion réussie ! Initialisation de l'espace investisseur..." : "Connection successful! Initializing secure investor dashboard...");
       
       setTimeout(() => {
         onLoginSuccess(response.user);
