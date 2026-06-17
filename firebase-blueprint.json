@@ -1,0 +1,209 @@
+{
+  "entities": {
+    "User": {
+      "title": "User Profile",
+      "description": "User account detail and financial balance",
+      "type": "object",
+      "properties": {
+        "id": { "type": "string" },
+        "name": { "type": "string" },
+        "whatsapp": { "type": "string" },
+        "country": { "type": "string" },
+        "password_hash": { "type": "string" },
+        "balance": { "type": "number" },
+        "daily_earnings": { "type": "number" },
+        "total_earnings": { "type": "number" },
+        "total_deposits": { "type": "number" },
+        "total_withdrawals": { "type": "number" },
+        "status": { "type": "string" },
+        "referral_code": { "type": "string" },
+        "referred_by_code": { "type": "string" },
+        "bonus_points": { "type": "number" },
+        "is_admin": { "type": "boolean" },
+        "created_at": { "type": "string" },
+        "last_daily_checkin": { "type": "string" }
+      },
+      "required": ["id", "name", "whatsapp"]
+    },
+    "Product": {
+      "title": "VIP Product Plan",
+      "description": "Premium agricultural investment packages",
+      "type": "object",
+      "properties": {
+        "id": { "type": "string" },
+        "name": { "type": "string" },
+        "price": { "type": "number" },
+        "daily_return": { "type": "number" },
+        "duration_days": { "type": "number" },
+        "total_return": { "type": "number" },
+        "badge": { "type": "string" },
+        "max_purchase_count": { "type": "number" },
+        "is_blocked": { "type": "boolean" }
+      },
+      "required": ["id", "name", "price", "daily_return", "duration_days"]
+    },
+    "Investment": {
+      "title": "User Investment Contract",
+      "description": "Acquired VIP plans generating daily returns",
+      "type": "object",
+      "properties": {
+        "id": { "type": "string" },
+        "user_id": { "type": "string" },
+        "plan_id": { "type": "string" },
+        "plan_name": { "type": "string" },
+        "price": { "type": "number" },
+        "daily_return": { "type": "number" },
+        "days_active": { "type": "number" },
+        "total_return": { "type": "number" },
+        "purchase_date": { "type": "string" },
+        "last_claim_date": { "type": "string" },
+        "duration_days": { "type": "number" }
+      },
+      "required": ["id", "user_id", "plan_name", "price", "daily_return"]
+    },
+    "Deposit": {
+      "title": "Mobile Money Deposit",
+      "description": "User MoMo deposit request",
+      "type": "object",
+      "properties": {
+        "id": { "type": "string" },
+        "user_id": { "type": "string" },
+        "whatsapp": { "type": "string" },
+        "amount": { "type": "number" },
+        "reference": { "type": "string" },
+        "payment_capture": { "type": "string" },
+        "provider": { "type": "string" },
+        "status": { "type": "string" },
+        "date": { "type": "string" }
+      },
+      "required": ["id", "user_id", "amount", "status"]
+    },
+    "Withdrawal": {
+      "title": "Withdrawal Request",
+      "description": "Withdrawal request wait-listed for admin review",
+      "type": "object",
+      "properties": {
+        "id": { "type": "string" },
+        "user_id": { "type": "string" },
+        "whatsapp": { "type": "string" },
+        "amount": { "type": "number" },
+        "provider": { "type": "string" },
+        "status": { "type": "string" },
+        "date": { "type": "string" },
+        "payment_proof": { "type": "string" }
+      },
+      "required": ["id", "user_id", "amount", "status"]
+    },
+    "ReferralCommission": {
+      "title": "Referral Commission Reward",
+      "description": "Indirect earnings from referred users affiliate network",
+      "type": "object",
+      "properties": {
+        "id": { "type": "string" },
+        "from_user_id": { "type": "string" },
+        "to_user_id": { "type": "string" },
+        "amount": { "type": "number" },
+        "level": { "type": "number" },
+        "date": { "type": "string" }
+      },
+      "required": ["id", "from_user_id", "to_user_id", "amount"]
+    },
+    "Ticket": {
+      "title": "Support Message",
+      "description": "Chat log messages for live assistance",
+      "type": "object",
+      "properties": {
+        "id": { "type": "string" },
+        "user_id": { "type": "string" },
+        "sender": { "type": "string" },
+        "message": { "type": "string" },
+        "date": { "type": "string" }
+      },
+      "required": ["id", "user_id", "sender", "message"]
+    },
+    "Notification": {
+      "title": "App Notification",
+      "description": "Live custom notification row",
+      "type": "object",
+      "properties": {
+        "id": { "type": "string" },
+        "user_id": { "type": "string" },
+        "title": { "type": "string" },
+        "message": { "type": "string" },
+        "date": { "type": "string" },
+        "read_by": {
+          "type": "array"
+        }
+      },
+      "required": ["id", "user_id", "title", "message"]
+    },
+    "BonusCode": {
+      "title": "Redeemable Coupon",
+      "description": "Promotional bonus coupon codes",
+      "type": "object",
+      "properties": {
+        "code": { "type": "string" },
+        "amount": { "type": "number" },
+        "claimed_by": {
+          "type": "array"
+        },
+        "created_by": { "type": "string" },
+        "usage_limit": { "type": "number" }
+      },
+      "required": ["code", "amount"]
+    },
+    "Settings": {
+      "title": "System Parameters",
+      "description": "Global custom support settings details",
+      "type": "object",
+      "properties": {
+        "id": { "type": "string" },
+        "whatsapp_group_link": { "type": "string" },
+        "telegram_channel_link": { "type": "string" }
+      },
+      "required": ["id"]
+    }
+  },
+  "firestore": {
+    "/users/{userId}": {
+      "schema": "User",
+      "description": "User profile records"
+    },
+    "/products/{productId}": {
+      "schema": "Product",
+      "description": "VIP plan configurations"
+    },
+    "/investments/{investmentId}": {
+      "schema": "Investment",
+      "description": "Acquired contracts"
+    },
+    "/deposits/{depositId}": {
+      "schema": "Deposit",
+      "description": "MoMo deposit intents"
+    },
+    "/withdrawals/{withdrawalId}": {
+      "schema": "Withdrawal",
+      "description": "MoMo withdrawal intents"
+    },
+    "/referral_commissions/{commissionId}": {
+      "schema": "ReferralCommission",
+      "description": "Direct affiliate rewards ledger"
+    },
+    "/tickets/{ticketId}": {
+      "schema": "Ticket",
+      "description": "Customer service message streams"
+    },
+    "/notifications/{notificationId}": {
+      "schema": "Notification",
+      "description": "System bulletins"
+    },
+    "/bonus_codes/{bonusId}": {
+      "schema": "BonusCode",
+      "description": "Global codes ledger"
+    },
+    "/settings/{settingsId}": {
+      "schema": "Settings",
+      "description": "Global settings details document"
+    }
+  }
+}

@@ -2187,10 +2187,10 @@ export default function AdminView({ adminUserId, onExit, lang }: AdminViewProps)
                 <div className="space-y-1">
                   <h2 className="text-lg font-bold font-mono text-emerald-400 uppercase tracking-wide flex items-center gap-2">
                     <Database className="w-5 h-5 text-emerald-400" />
-                    Diagnostics Supabase Cloud & RLS
+                    Diagnostics Firebase Cloud Firestore
                   </h2>
                   <p className="text-xs text-slate-300">
-                    Vérification en temps réel de la base de données iAgri, des permissions RLS et de la connectivité réseau.
+                    Vérification en temps réel de la base de données cloud Firebase, de l'état des collections et de la connectivité réseau.
                   </p>
                 </div>
                 
@@ -2217,28 +2217,28 @@ export default function AdminView({ adminUserId, onExit, lang }: AdminViewProps)
               {/* Connection Status Grid */}
               <div className="grid sm:grid-cols-2 lg:grid-cols-3 gap-4">
                 <div className="bg-[#090D2A] border border-white/5 rounded-2xl p-4 space-y-2">
-                  <span className="text-[10px] font-mono text-slate-400 uppercase">HÔTE SUPABASE</span>
+                  <span className="text-[10px] font-mono text-slate-400 uppercase">SERVEUR BASE DE DONNÉES</span>
                   <div className="flex items-center gap-2">
                     <div className="w-2.5 h-2.5 rounded-full bg-emerald-500 animate-pulse" />
-                    <span className="text-xs font-bold font-mono text-white truncate">otjlhdridxdxupbetabe</span>
+                    <span className="text-xs font-bold font-mono text-white truncate">Firebase Firestore Cloud Master</span>
                   </div>
-                  <p className="text-[11px] text-slate-400">Services Cloud configurés et actifs sur Supabase.</p>
+                  <p className="text-[11px] text-slate-400">Services Cloud configurés et actifs sur ornate-signal-p6d0h.</p>
                 </div>
 
                 <div className="bg-[#090D2A] border border-white/5 rounded-2xl p-4 space-y-2">
-                  <span className="text-[10px] font-mono text-slate-400 uppercase">RÔLE PRIVILÈGE</span>
+                  <span className="text-[10px] font-mono text-slate-400 uppercase">MODE BANQUE DE DONNÉES</span>
                   <div className="flex items-center gap-2">
                     <div className="w-2.5 h-2.5 rounded-full bg-emerald-500" />
-                    <span className="text-xs font-bold font-mono text-slate-200">Service_Role (Admin Contournement RLS)</span>
+                    <span className="text-xs font-bold font-mono text-slate-200">Gérée par Google Cloud (Sans RLS Bloquant)</span>
                   </div>
                   <p className="text-[11px] text-slate-400">Accès maître complet direct au stockage principal.</p>
                 </div>
 
                 <div className="bg-[#090D2A] border border-white/5 rounded-2xl p-4 space-y-2">
-                  <span className="text-[10px] font-mono text-slate-400 uppercase">RÉSEAU DE CANAUX WEBSOCKET CHANNELS</span>
+                  <span className="text-[10px] font-mono text-slate-400 uppercase">RÉSEAU DE CANAUX TEMPS RÉEL (SNAPSHOTS)</span>
                   <div className="flex items-center gap-2">
                     <div className="w-2.5 h-2.5 rounded-full bg-emerald-500 animate-pulse" />
-                    <span className="text-xs font-bold font-mono text-emerald-400">4 Canaux Actifs / Connectés</span>
+                    <span className="text-xs font-bold font-mono text-emerald-400">Actifs & Connectés</span>
                   </div>
                   <p className="text-[11px] text-slate-400">Écoute en temps réel de users, deposits, withdrawals, tickets.</p>
                 </div>
@@ -2254,10 +2254,12 @@ export default function AdminView({ adminUserId, onExit, lang }: AdminViewProps)
                   <span className="text-xl">{supabaseDiag.rlsVerified ? "🛡️" : "⚠️"}</span>
                   <div className="space-y-1">
                     <h4 className="text-xs font-bold uppercase font-mono">
-                      VÉRIFICATION DE SÉCURITÉ ROW LEVEL SECURITY (RLS) : {supabaseDiag.rlsVerified ? "CONTOURNEEE AVEC SUCCÈS" : "CORRECTION OU SCHEMA SQL REQUIS"}
+                      SÉCURITÉ DE LA BASE DE DONNÉES : {supabaseDiag.rlsVerified ? "OPÉRATIONNELLE ET SÉCURISÉE" : "ATTENTE DE CONNEXION"}
                     </h4>
                     <p className="text-xs text-slate-350 leading-relaxed">
-                      {supabaseDiag.rlsDetails}
+                      {supabaseDiag.rlsVerified
+                        ? "La connexion à Firebase Firestore fonctionne de manière optimale. Tous vos utilisateurs, investissements, retraits et dépôts sont stockés en toute sécurité dans l'infrastructure Google Cloud !"
+                        : "La synchronisation cloud a rencontré un problème. Veuillez vérifier la connexion ou appuyer sur Re-lancer."}
                     </p>
                   </div>
                 </div>
@@ -2330,9 +2332,9 @@ export default function AdminView({ adminUserId, onExit, lang }: AdminViewProps)
 
               {/* SQL script notice */}
               <div className="bg-slate-950/50 border border-white/5 rounded-2xl p-4 space-y-2">
-                <h4 className="text-xs font-bold text-white font-mono uppercase">BESOIN DE CHANGER DE BASE DE DONNÉES OU AJOUTER DIRECTEMENT CET ADMIN ?</h4>
+                <h4 className="text-xs font-bold text-white font-mono uppercase">VOTRE NOUVELLE INFRASTRUCTURE FIREBASE CLOUD</h4>
                 <p className="text-[11px] text-slate-400 leading-relaxed">
-                  Le système est actuellement connecté aux serveurs Cloud Supabase. Si vous lancez l'application sur un autre compte Supabase, assurez-vous de copier le code SQL du fichier <code className="text-emerald-405 font-bold">supabase_schema.sql</code> et de l'exécuter dans le <code className="font-bold underline">SQL Editor</code> de Supabase. Cela va configurer l'ensemble des tables requises, peupler les plans VIP, et désactiver Row Level Security (RLS) sur la table des utilisateurs pour vos accès d'administration.
+                  Le système est actuellement alimenté à 100% par <code className="text-emerald-400 font-bold font-mono">Firebase Firestore Cloud</code>, mettant un terme définitif aux blocages RLS et aux erreurs de schémas SQL complexes. Tous vos plans VIP, gains quotidiens et transactions financières MoMo (Flooz/T-Money/Wave) sont administrés de manière instantanée et fluide.
                 </p>
               </div>
 
