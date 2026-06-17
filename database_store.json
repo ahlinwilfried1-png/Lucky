@@ -6,9 +6,9 @@
       "whatsapp": "22890909090",
       "country": "Togo",
       "passwordHash": "AdminTogo2026*",
-      "balance": 799000,
-      "dailyEarnings": 0,
-      "totalEarnings": 0,
+      "balance": 915050,
+      "dailyEarnings": 14000,
+      "totalEarnings": 116050,
       "totalDeposits": 1000000,
       "totalWithdrawals": 1000,
       "status": "active",
@@ -17,7 +17,7 @@
       "bonusPoints": 0,
       "created_at": "2026-06-14T12:49:55.38+00:00",
       "isAdmin": true,
-      "lastDailyCheckin": null
+      "lastDailyCheckin": "2026-06-17"
     },
     {
       "id": "admin-wilfried",
@@ -162,10 +162,10 @@
       "price": 100000,
       "dailyReturn": 30000,
       "totalWeeks": 2,
-      "daysActive": 0,
+      "daysActive": 2,
       "totalReturn": 300000,
       "purchaseDate": "2026-06-14T23:30:22.856+00:00",
-      "lastClaimDate": "2026-06-14T23:30:22.856+00:00",
+      "lastClaimDate": "2026-06-16T23:30:22.856+00:00",
       "durationDays": 10
     },
     {
@@ -176,10 +176,10 @@
       "price": 50000,
       "dailyReturn": 14000,
       "totalWeeks": 2,
-      "daysActive": 0,
+      "daysActive": 2,
       "totalReturn": 140000,
       "purchaseDate": "2026-06-14T23:32:36.517+00:00",
-      "lastClaimDate": "2026-06-14T23:32:36.517+00:00",
+      "lastClaimDate": "2026-06-16T23:32:36.517+00:00",
       "durationDays": 10
     },
     {
@@ -190,10 +190,10 @@
       "price": 50000,
       "dailyReturn": 14000,
       "totalWeeks": 2,
-      "daysActive": 0,
+      "daysActive": 2,
       "totalReturn": 140000,
       "purchaseDate": "2026-06-14T23:36:36.151+00:00",
-      "lastClaimDate": "2026-06-14T23:36:36.151+00:00",
+      "lastClaimDate": "2026-06-16T23:36:36.151+00:00",
       "durationDays": 10
     }
   ],
@@ -202,6 +202,56 @@
   "referralCommissions": [],
   "tickets": [],
   "notifications": [
+    {
+      "id": "notif-sponsor-1781441424340",
+      "userId": "admin-wilfried",
+      "title": "Nouvel invité enregistré",
+      "message": "Félicitations, Test Device Register s'est inscrit sous votre lien de parrainage (Niveau 1) !",
+      "date": "2026-06-14T12:50:24.34+00:00",
+      "readBy": []
+    },
+    {
+      "id": "notif-wtd-sent-1781445573629",
+      "userId": "admin-master",
+      "title": "Retrait en cours",
+      "message": "Votre demande de retrait de 1000 FCFA sur le numéro +2285677888 est reçue. Notre administration traite les retraits dans un délai de 2 à 24 heures.",
+      "date": "2026-06-14T13:59:33.629+00:00",
+      "readBy": [
+        "admin-master"
+      ]
+    },
+    {
+      "id": "notif-profit-1781690956724ec8c",
+      "userId": "admin-master",
+      "title": "Revenus VIP crédités",
+      "message": "Félicitations! Vous avez reçu 60000 FCFA pour votre plan VIP Ultimate - Prestige (2 jour(s) de gains).",
+      "date": "2026-06-17T10:09:16.724+00:00",
+      "readBy": []
+    },
+    {
+      "id": "notif-profit-1781690956724777l",
+      "userId": "admin-master",
+      "title": "Revenus VIP crédités",
+      "message": "Félicitations! Vous avez reçu 28000 FCFA pour votre plan VIP Diamond - Leader (2 jour(s) de gains).",
+      "date": "2026-06-17T10:09:16.724+00:00",
+      "readBy": []
+    },
+    {
+      "id": "notif-profit-1781690956724g5ih",
+      "userId": "admin-master",
+      "title": "Revenus VIP crédités",
+      "message": "Félicitations! Vous avez reçu 28000 FCFA pour votre plan VIP Diamond - Leader (2 jour(s) de gains).",
+      "date": "2026-06-17T10:09:16.724+00:00",
+      "readBy": []
+    },
+    {
+      "id": "notif-daily-gift-1781690977500",
+      "userId": "admin-master",
+      "title": "Pointage quotidien effectué ! 🎁",
+      "message": "Vous avez effectué votre pointage aujourd'hui et généré : +50 FCFA. Revenez demain !",
+      "date": "2026-06-17T10:09:37.5+00:00",
+      "readBy": []
+    },
     {
       "id": "notif-wtd-ok-1781445601157",
       "userId": "admin-master",
@@ -249,24 +299,6 @@
       "message": "Heureux de vous compter parmi nous, Test Device Register ! Un bonus d'inscription de 200 FCFA a été crédité sur votre solde ! Profitez également de notre code BIENVENUE pour obtenir plus de bonus !",
       "date": "2026-06-14T12:50:24.34+00:00",
       "readBy": []
-    },
-    {
-      "id": "notif-sponsor-1781441424340",
-      "userId": "admin-wilfried",
-      "title": "Nouvel invité enregistré",
-      "message": "Félicitations, Test Device Register s'est inscrit sous votre lien de parrainage (Niveau 1) !",
-      "date": "2026-06-14T12:50:24.34+00:00",
-      "readBy": []
-    },
-    {
-      "id": "notif-wtd-sent-1781445573629",
-      "userId": "admin-master",
-      "title": "Retrait en cours",
-      "message": "Votre demande de retrait de 1000 FCFA sur le numéro +2285677888 est reçue. Notre administration traite les retraits dans un délai de 2 à 24 heures.",
-      "date": "2026-06-14T13:59:33.629+00:00",
-      "readBy": [
-        "admin-master"
-      ]
     }
   ],
   "bonusCodes": [],
